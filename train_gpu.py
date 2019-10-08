@@ -81,7 +81,7 @@ flags.DEFINE_integer("num_predict", default=None,
       help="Number of tokens to predict in partial prediction.")
 flags.DEFINE_integer('perm_size', default=None,
   help='perm size.')
-flags.DEFINE_bool("uncased", False,
+flags.DEFINE_bool("uncased", True,
       help="Use uncased inputs or not.")
 flags.DEFINE_integer("n_token", 32000, help="Vocab size")
 
