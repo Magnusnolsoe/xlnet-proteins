@@ -11,7 +11,6 @@ from __future__ import print_function
 import tensorflow as tf
 import numpy as np
 import os
-import random
 import json
 
 from segment_splitting import _split_a_and_b
@@ -32,7 +31,7 @@ special_symbols = {
     "<eop>"  : 37,
 }
 
-VOCAB_SIZE = len(LOOKUP_TABLE) + len(special_symbols)
+VOCAB_SIZE = len(LOOKUP_TABLE)
 EOP_ID = special_symbols["<eop>"]
 CLS_ID = special_symbols["<cls>"]
 SEP_ID = special_symbols["<sep>"]
