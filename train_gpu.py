@@ -195,8 +195,6 @@ def train(ps_device):
       perm_size=FLAGS.perm_size,
       mask_alpha=FLAGS.mask_alpha,
       mask_beta=FLAGS.mask_beta,
-      uncased=FLAGS.uncased,
-      num_passes=FLAGS.num_passes,
       use_bfloat16=FLAGS.use_bfloat16,
       num_predict=FLAGS.num_predict)
 
