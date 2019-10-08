@@ -32,7 +32,7 @@
 	"n_token": 0,
 	"mem_len": 0,
 	"same_length": true,
-	"clamp_length": 0,
+	"clamp_len": 0,
 	"n_layer": 0,
 	"d_model": 0,
 	"d_embed": 0,

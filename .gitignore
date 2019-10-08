@@ -107,4 +107,4 @@ venv.bak/
 data/
 proc_data/
 
-parameter_config_files/ignore
+param_configs/ignore
