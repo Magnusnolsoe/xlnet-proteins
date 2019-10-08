@@ -42,6 +42,7 @@ def main(_):
 
         
         python = params['python']
+        assert python is not None
 
         os.system(python + " train_gpu.py " + args)
 
