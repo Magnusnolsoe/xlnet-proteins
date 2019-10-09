@@ -322,12 +322,35 @@ def train(ps_device):
   gpu_options = tf.GPUOptions(allow_growth=True)
 
   model_utils.init_from_checkpoint(FLAGS, global_vars=True)
+  
+  with tf.name_scope('training'):
+        tf_training_loss_ph = tf.placeholder(tf.float32,shape=None, name='training-loss')
+        tf_training_loss_summary = tf.summary.scalar('training_loss', tf_training_loss_ph)
+       
+        tf_training_pplx_ph = tf.placeholder(tf.float32,shape=None, name='training_ppl')
+        tf_training_ppl_summary = tf.summary.scalar('training_pplx', tf_training_pplx_ph)
+        
+  with tf.name_scope('validation'):
+        tf_valid_loss_ph = tf.placeholder(tf.float32,shape=None, name='validation-loss')
+        tf_valid_loss_summary = tf.summary.scalar('validation_loss', tf_valid_loss_ph)
+       
+        tf_valid_pplx_ph = tf.placeholder(tf.float32,shape=None, name='validation_ppl')
+        tf_valid_ppl_summary = tf.summary.scalar('validation_pplx', tf_valid_pplx_ph)
+        
+  training_performance_summaries = tf.summary.merge([tf_training_loss_summary, tf_training_ppl_summary])
+  valid_performance_summaries = tf.summary.merge([tf_valid_loss_summary, tf_valid_ppl_summary])
 
   with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,
       gpu_options=gpu_options)) as sess:
     sess.run(tf.global_variables_initializer())
 
     fetches = [loss, tower_new_mems, global_step, gnorm, learning_rate, train_op]
+    
+    train_log_dir = 'logging/1/train'
+    train_summary_writer = tf.summary.FileWriter(train_log_dir, sess.graph)
+    
+    valid_log_dir = 'logging/1/valid'
+    valid_summary_writer = tf.summary.FileWriter(valid_log_dir, sess.graph)
 
     total_loss, prev_step = 0., -1
     while True:
@@ -344,6 +367,8 @@ def train(ps_device):
 
       if curr_step > 0 and curr_step % FLAGS.iterations == 0:
         curr_loss = total_loss / (curr_step - prev_step)
+        summ = sess.run(training_performance_summaries, feed_dict={tf_training_loss_ph:curr_loss, tf_training_pplx_ph:math.exp(curr_loss)})
+        train_summary_writer.add_summary(summ, curr_step)
         tf.logging.info("[{}] | gnorm {:.2f} lr {:8.6f} "
             "| loss {:.2f} | pplx {:>7.2f}, bpc {:>7.4f}".format(
             curr_step, fetched[-3], fetched[-2],
@@ -383,8 +408,13 @@ def train(ps_device):
                   v_steps += 1
                 
           except tf.errors.OutOfRangeError:
-              tf.logging.info("Validation: [{}] loss {:.2f}".format(curr_step,
-                              v_total_loss/v_steps))
+              val_loss = v_total_loss/v_steps
+              v_pplx = math.exp(val_loss)
+              tf.logging.info("Validation: [{}] | loss {:.2f}".format(curr_step,
+                              val_loss))
+              
+              summ_valid = sess.run(valid_performance_summaries, feed_dict={tf_valid_loss_ph:val_loss, tf_valid_pplx_ph:v_pplx})
+              valid_summary_writer.add_summary(summ_valid, curr_step)
       
       if curr_step >= FLAGS.train_steps:
         break
