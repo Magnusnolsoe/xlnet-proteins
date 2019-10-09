@@ -9,14 +9,14 @@ import os
 import json
 from absl import flags, app
 
-flags.DEFINE_string('param_config', default=None,
+flags.DEFINE_string('config', default=None,
       help='Parameter config file')
 FLAGS = flags.FLAGS
 
 
 def main(_):
     
-    with open(FLAGS.param_config, 'r') as config_file:
+    with open(FLAGS.config, 'r') as config_file:
         params = json.load(config_file) 
         
         '''

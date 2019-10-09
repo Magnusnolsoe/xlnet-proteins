@@ -21,17 +21,12 @@ LOOKUP_TABLE = {'M': 0, 'R': 1, 'W': 2, 'L': 3, 'D': 4,
                 'I': 15, 'N': 16, 'C': 17, 'Y': 18, 'Q': 19,
                 'X': 20, 'B': 21, 'U': 22, 'Z': 23}
 special_symbols = {
-    "<unk>"  : 30,
-    "<s>"    : 31,
-    "</s>"   : 32,
-    "<cls>"  : 33,
-    "<sep>"  : 34,
-    "<pad>"  : 35,
-    "<mask>" : 36,
-    "<eop>"  : 37,
+    "<cls>"  : 24,
+    "<sep>"  : 25,
+    "<eop>"  : 26,
 }
 
-VOCAB_SIZE = len(LOOKUP_TABLE)
+VOCAB_SIZE = len(LOOKUP_TABLE) + len(special_symbols)
 EOP_ID = special_symbols["<eop>"]
 CLS_ID = special_symbols["<cls>"]
 SEP_ID = special_symbols["<sep>"]
