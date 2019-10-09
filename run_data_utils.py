@@ -48,7 +48,7 @@ def main(_):
         python = params['python'] # python cmd to be used
         assert python is not None
 
-        os.system(python +" data_utils.py " + args)
+        os.system(python +" nlp_data_utils.py " + args)
 
 if __name__ == "__main__":
         app.run(main)
