@@ -29,12 +29,15 @@
 
 ### -- Specify the output and error file. %J is the job-id -- 
 ### -- -o and -e mean append, -oo and -eo mean overwrite -- 
-#BSUB -o Output.out
-#BSUB -e Error.err
+#BSUB -o hpc_outputs/Output.out
+#BSUB -e hpc_outputs/Error.err
 
 module load cuda/9.0
 module load cudnn/v7.0.5-prod-cuda-9.0
+module load python3/3.6.2
+module load tensorflow/1.12-gpu-python-3.6.2
 
-pip3 install --user tensorflow-gpu==1.13.1
+pip3 install --user numpy
+pip3 install --user absl-py
 
-python3 
+python3 run_train_gpu.py --config=param_configs/default-config.json
