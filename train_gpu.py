@@ -33,6 +33,8 @@ flags.DEFINE_integer("num_passes", default=1,
       help="Number of passed used for training.")
 flags.DEFINE_string("record_info_dir", default=None,
       help="Path to local directory containing `record_info-lm.json`.")
+flags.DEFINE_string("validation_record_info_dir", default=None,
+      help="Path to local directory containing `validation-record_info-lm.json`.")
 flags.DEFINE_string("model_dir", default=None,
       help="Estimator model_dir.")
 flags.DEFINE_string("init_checkpoint", default=None,
@@ -62,6 +64,8 @@ flags.DEFINE_integer("train_steps", default=100000,
       help="Total number of training steps.")
 flags.DEFINE_integer("iterations", default=1000,
       help="Number of iterations per repeat loop.")
+flags.DEFINE_integer("val_iterations", default=1000,
+      help="Number of iterations per validation.")
 flags.DEFINE_integer("save_steps", default=None,
       help="number of steps for model checkpointing.")
 
@@ -142,12 +146,15 @@ def get_model_fn():
     tf.logging.info('#params: {}'.format(num_params))
 
     # GPU
-    assert is_training
-    all_vars = tf.trainable_variables()
-    grads = tf.gradients(total_loss, all_vars)
-    grads_and_vars = list(zip(grads, all_vars))
-
-    return total_loss, new_mems, grads_and_vars
+    #assert is_training
+    if is_training:
+        all_vars = tf.trainable_variables()
+        grads = tf.gradients(total_loss, all_vars)
+        grads_and_vars = list(zip(grads, all_vars))
+    
+        return total_loss, new_mems, grads_and_vars
+    else:
+        return total_loss, new_mems
 
   return model_fn
 
@@ -197,10 +204,26 @@ def train(ps_device):
       mask_beta=FLAGS.mask_beta,
       use_bfloat16=FLAGS.use_bfloat16,
       num_predict=FLAGS.num_predict)
+  
+  valid_input_fn, record_info_dict_valid = data_utils.get_input_fn(
+          tfrecord_dir=FLAGS.validation_record_info_dir,
+          split="valid",
+          bsz_per_host=FLAGS.train_batch_size,
+          seq_len=FLAGS.seq_len,
+          reuse_len=FLAGS.reuse_len,
+          bi_data=FLAGS.bi_data,
+          num_hosts=1,
+          num_core_per_host=1,
+          perm_size=FLAGS.perm_size,
+          mask_alpha=FLAGS.mask_alpha,
+          mask_beta=FLAGS.mask_beta,
+          use_bfloat16=FLAGS.use_bfloat16,
+          num_predict=FLAGS.num_predict)
 
   # for key, info in record_info_dict.items():
-  tf.logging.info("num of batches {}".format(record_info_dict["num_batch"]))
-
+  tf.logging.info("num of train batches {}".format(record_info_dict["num_batch"]))
+  tf.logging.info("num of validation batches {}".format(record_info_dict_valid["num_batch"]))
+  
   ##### Create input tensors / placeholders
   bsz_per_core = FLAGS.train_batch_size // FLAGS.num_core_per_host
 
@@ -208,20 +231,33 @@ def train(ps_device):
       "batch_size": FLAGS.train_batch_size # the whole batch
   }
   train_set = train_input_fn(params)
+  valid_set = valid_input_fn(params)
 
   example = train_set.make_one_shot_iterator().get_next()
+  v_iter = valid_set.make_initializable_iterator()
+  v_example = v_iter.get_next()
 
   if FLAGS.num_core_per_host > 1:
+    # train set
     examples = [{} for _ in range(FLAGS.num_core_per_host)]
     for key in example.keys():
       vals = tf.split(example[key], FLAGS.num_core_per_host, 0)
       for device_id in range(FLAGS.num_core_per_host):
         examples[device_id][key] = vals[device_id]
+    
+    # validation set
+    v_examples = [{} for _ in range(FLAGS.num_core_per_host)]
+    for key in v_example.keys():
+        vals = tf.split(v_example[key], FLAGS.num_core_per_host, 0)
+        for device_id in range(FLAGS.num_core_per_host):
+            v_examples[device_id][key] = vals[device_id]
   else:
     examples = [example]
+    v_examples = [v_example]
 
   ##### Create computational graph
   tower_mems, tower_losses, tower_new_mems, tower_grads_and_vars = [], [], [], []
+  v_tower_mems, v_tower_losses, v_tower_new_mems = [], [], []
 
   for i in range(FLAGS.num_core_per_host):
     reuse = True if i > 0 else None
@@ -230,18 +266,29 @@ def train(ps_device):
 
       # The mems for each tower is a dictionary
       mems_i = {}
+      v_mems_i = {}
       if FLAGS.mem_len:
         mems_i["mems"] = create_mems_tf(bsz_per_core)
+        v_mems_i["mems"] = create_mems_tf(bsz_per_core)
 
       loss_i, new_mems_i, grads_and_vars_i = single_core_graph(
           is_training=True,
           features=examples[i],
           mems=mems_i)
+      
+      v_loss_i, v_new_mems_i = single_core_graph(
+          is_training=False,
+          features=v_examples[i],
+          mems=v_mems_i)
 
       tower_mems.append(mems_i)
       tower_losses.append(loss_i)
       tower_new_mems.append(new_mems_i)
       tower_grads_and_vars.append(grads_and_vars_i)
+      
+      v_tower_mems.append(v_mems_i)
+      v_tower_losses.append(v_loss_i)
+      v_tower_new_mems.append(v_new_mems_i)
 
   ## average losses and gradients across towers
   if len(tower_losses) > 1:
@@ -250,6 +297,11 @@ def train(ps_device):
   else:
     loss = tower_losses[0]
     grads_and_vars = tower_grads_and_vars[0]
+    
+  if len(v_tower_losses) > 1:
+    v_loss = tf.add_n(v_tower_losses) / len(v_tower_losses)
+  else:
+    v_loss = v_tower_losses[0]
 
   ## get train op
   train_op, learning_rate, gnorm = model_utils.get_train_op(FLAGS, None,
@@ -302,7 +354,38 @@ def train(ps_device):
         save_path = os.path.join(FLAGS.model_dir, "model.ckpt")
         saver.save(sess, save_path)
         tf.logging.info("Model saved in path: {}".format(save_path))
-
+      
+      if curr_step > 0 and curr_step % FLAGS.val_iterations == 0:
+          
+          v_tower_mems_np = []
+          for i in range(FLAGS.num_core_per_host):
+            v_mems_i_np = {}
+            for key in v_tower_mems[i].keys():
+              v_mems_i_np[key] = initialize_mems_np(bsz_per_core)
+            v_tower_mems_np.append(v_mems_i_np)
+          
+          v_fetches = [v_loss, v_tower_new_mems]
+          
+          sess.run(v_iter.initializer)
+          v_total_loss = 0.
+          v_steps = 0
+          try:
+              while True:
+                  v_feed_dict = {}
+                  for i in range(FLAGS.num_core_per_host):
+                    for key in v_tower_mems_np[i].keys():
+                      for m, m_np in zip(v_tower_mems[i][key], v_tower_mems_np[i][key]):
+                       v_feed_dict[m] = m_np
+                  
+                  v_fetched = sess.run(v_fetches, feed_dict=v_feed_dict)
+                  v_loss_np, v_tower_mems_np = v_fetched[:]
+                  v_total_loss += v_loss_np
+                  v_steps += 1
+                
+          except tf.errors.OutOfRangeError:
+              tf.logging.info("Validation: [{}] loss {:.2f}".format(curr_step,
+                              v_total_loss/v_steps))
+      
       if curr_step >= FLAGS.train_steps:
         break
 

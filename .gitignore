@@ -103,8 +103,9 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-# data folders
+# folders
 data/
+model/
+models/
 proc_data/
-
 param_configs/ignore
