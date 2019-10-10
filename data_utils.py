@@ -37,36 +37,22 @@ def parse_files_to_dataset(parser, file_names, split, num_batch, num_hosts,
     
     
     #assert split == "train"
+    dataset = tf.data.Dataset.from_tensor_slices(file_names)
+    
+    if len(file_names) > 1:
+        dataset = dataset.shuffle(len(file_names))
+    
+    dataset = tf.data.TFRecordDataset(dataset)
+    
+    # (zihang): since we are doing online preprocessing, the parsed result of
+    # the same input at each time will be different. Thus, cache processed data
+    # is not helpful. It will use a lot of memory and lead to contrainer OOM.
+    # So, change to cache non-parsed raw data instead.
+    dataset = dataset.cache().map(parser)
     if split == "train":
-        dataset = tf.data.Dataset.from_tensor_slices(file_names)
-        
-        if len(file_names) > 1:
-            dataset = dataset.shuffle(len(file_names))
-        
-        dataset = tf.data.TFRecordDataset(dataset)
-        
-        # (zihang): since we are doing online preprocessing, the parsed result of
-        # the same input at each time will be different. Thus, cache processed data
-        # is not helpful. It will use a lot of memory and lead to contrainer OOM.
-        # So, change to cache non-parsed raw data instead.
-        dataset = dataset.cache().map(parser).repeat()
-        dataset = dataset.batch(bsz_per_core, drop_remainder=True)
-        dataset = dataset.prefetch(num_core_per_host * bsz_per_core)
-    else:
-        dataset = tf.data.Dataset.from_tensor_slices(file_names)
-        
-        if len(file_names) > 1:
-            dataset = dataset.shuffle(len(file_names))
-        
-        dataset = tf.data.TFRecordDataset(dataset)
-        
-        # (zihang): since we are doing online preprocessing, the parsed result of
-        # the same input at each time will be different. Thus, cache processed data
-        # is not helpful. It will use a lot of memory and lead to contrainer OOM.
-        # So, change to cache non-parsed raw data instead.
-        dataset = dataset.cache().map(parser)
-        dataset = dataset.batch(bsz_per_core, drop_remainder=True)
-        dataset = dataset.prefetch(num_core_per_host * bsz_per_core)
+        dataset = dataset.repeat()
+    dataset = dataset.batch(bsz_per_core, drop_remainder=True)
+    dataset = dataset.prefetch(num_core_per_host * bsz_per_core)
     
     return dataset
 
