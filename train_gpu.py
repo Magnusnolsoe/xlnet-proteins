@@ -141,7 +141,7 @@ FLAGS = flags.FLAGS
 def get_model_fn():
   def model_fn(features, labels, mems, is_training):
     #### Get loss from inputs
-    total_loss, new_mems, monitor_dict = function_builder.get_loss(
+    total_loss, total_accuracy, new_mems, monitor_dict = function_builder.get_loss(
         FLAGS, features, labels, mems, is_training)
 
     #### Check model parameters
@@ -155,9 +155,9 @@ def get_model_fn():
         grads = tf.gradients(total_loss, all_vars)
         grads_and_vars = list(zip(grads, all_vars))
     
-        return total_loss, new_mems, grads_and_vars
+        return total_loss, total_accuracy, new_mems, grads_and_vars
     else:
-        return total_loss, new_mems
+        return total_loss, total_accuracy, new_mems
 
   return model_fn
 
@@ -258,8 +258,8 @@ def train(ps_device):
     v_examples = [v_example]
 
   ##### Create computational graph
-  tower_mems, tower_losses, tower_new_mems, tower_grads_and_vars = [], [], [], []
-  v_tower_mems, v_tower_losses, v_tower_new_mems = [], [], []
+  tower_mems, tower_losses, tower_accs, tower_new_mems, tower_grads_and_vars = [], [], [], [], []
+  v_tower_mems, v_tower_losses, v_tower_accs, v_tower_new_mems = [], [], [], []
 
   for i in range(FLAGS.num_core_per_host):
     reuse = True if i > 0 else None
@@ -273,37 +273,43 @@ def train(ps_device):
         mems_i["mems"] = create_mems_tf(bsz_per_core)
         v_mems_i["mems"] = create_mems_tf(bsz_per_core)
 
-      loss_i, new_mems_i, grads_and_vars_i = single_core_graph(
+      loss_i, acc_i, new_mems_i, grads_and_vars_i = single_core_graph(
           is_training=True,
           features=examples[i],
           mems=mems_i)
       
-      v_loss_i, v_new_mems_i = single_core_graph(
+      v_loss_i, v_acc_i, v_new_mems_i = single_core_graph(
           is_training=False,
           features=v_examples[i],
           mems=v_mems_i)
 
       tower_mems.append(mems_i)
       tower_losses.append(loss_i)
+      tower_accs.append(acc_i)
       tower_new_mems.append(new_mems_i)
       tower_grads_and_vars.append(grads_and_vars_i)
       
       v_tower_mems.append(v_mems_i)
       v_tower_losses.append(v_loss_i)
+      v_tower_accs.append(v_acc_i)
       v_tower_new_mems.append(v_new_mems_i)
 
   ## average losses and gradients across towers
   if len(tower_losses) > 1:
     loss = tf.add_n(tower_losses) / len(tower_losses)
+    accuracy = tf.add_n(tower_accs) / len(tower_accs)
     grads_and_vars = average_grads_and_vars(tower_grads_and_vars)
   else:
     loss = tower_losses[0]
+    accuracy = tower_accs[0]
     grads_and_vars = tower_grads_and_vars[0]
     
   if len(v_tower_losses) > 1:
     v_loss = tf.add_n(v_tower_losses) / len(v_tower_losses)
+    v_acc = tf.add_n(v_tower_accs) / len(v_tower_accs)
   else:
     v_loss = v_tower_losses[0]
+    v_acc = v_tower_accs[0]
 
   ## get train op
   train_op, learning_rate, gnorm = model_utils.get_train_op(FLAGS, None,
@@ -332,12 +338,12 @@ def train(ps_device):
       gpu_options=gpu_options)) as sess:
     sess.run(tf.global_variables_initializer())
 
-    fetches = [loss, tower_new_mems, global_step, gnorm, learning_rate, train_op]
+    fetches = [loss, accuracy, tower_new_mems, global_step, gnorm, learning_rate, train_op]
     
     # Create writers for Tensorboard logging
     train_summary_writer, valid_summary_writer = tb.create_writers(sess, logging_dir=FLAGS.tb_logging_dir)
     
-    total_loss, prev_step = 0., -1
+    total_loss, total_acc, prev_step = 0., 0., -1
     while True:
       feed_dict = {}
       for i in range(FLAGS.num_core_per_host):
@@ -347,18 +353,20 @@ def train(ps_device):
 
       fetched = sess.run(fetches, feed_dict=feed_dict)
 
-      loss_np, tower_mems_np, curr_step = fetched[:3]
+      loss_np, acc_np, tower_mems_np, curr_step = fetched[:4]
       total_loss += loss_np
+      total_acc += acc_np
 
       if curr_step > 0 and curr_step % FLAGS.iterations == 0:
         curr_loss = total_loss / (curr_step - prev_step)
-        summ = tb.run_train(sess, training_performance_summaries, curr_loss)
+        curr_acc = total_acc / (curr_step - prev_step)
+        summ = tb.run_train(sess, training_performance_summaries, curr_loss, curr_acc)
         train_summary_writer.add_summary(summ, curr_step)
         tf.logging.info("[{}] | gnorm {:.2f} lr {:8.6f} "
-            "| loss {:.2f} | pplx {:>7.2f}, bpc {:>7.4f}".format(
+            "| loss {:.2f} | accuracy {:.2f} | pplx {:>7.2f}, bpc {:>7.4f}".format(
             curr_step, fetched[-3], fetched[-2],
-            curr_loss, math.exp(curr_loss), curr_loss / math.log(2)))
-        total_loss, prev_step = 0., curr_step
+            curr_loss, curr_acc, math.exp(curr_loss), curr_loss / math.log(2)))
+        total_loss, total_acc, prev_step = 0., 0., curr_step
 
       if curr_step > 0 and curr_step % FLAGS.save_steps == 0:
         save_path = os.path.join(FLAGS.model_dir, "model.ckpt")
@@ -376,10 +384,10 @@ def train(ps_device):
               v_mems_i_np[key] = initialize_mems_np(bsz_per_core)
             v_tower_mems_np.append(v_mems_i_np)
           
-          v_fetches = [v_loss, v_tower_new_mems]
+          v_fetches = [v_loss, v_acc, v_tower_new_mems]
           
           sess.run(v_iter.initializer)
-          v_total_loss = 0.
+          v_total_loss, v_total_acc = 0., 0.
           v_steps = 0
           try:
               while True:
@@ -390,17 +398,19 @@ def train(ps_device):
                        v_feed_dict[m] = m_np
                   
                   v_fetched = sess.run(v_fetches, feed_dict=v_feed_dict)
-                  v_loss_np, v_tower_mems_np = v_fetched[:]
+                  v_loss_np, v_acc_np, v_tower_mems_np = v_fetched[:]
                   v_total_loss += v_loss_np
+                  v_total_acc += v_acc_np
                   v_steps += 1
                 
           except tf.errors.OutOfRangeError:
               val_loss = v_total_loss/v_steps
+              val_acc = v_total_acc/v_steps
               v_pplx = math.exp(val_loss)
-              tf.logging.info("Validation: [{}] | loss {:.2f} | pplx {:>7.2f}".format(curr_step,
-                              val_loss, v_pplx))
+              tf.logging.info("Validation: [{}] | loss {:.2f} | accuracy {:.2f} | pplx {:>7.2f}"
+                                    .format(curr_step, val_loss, val_acc, v_pplx))
               
-              summ_valid = tb.run_valid(sess, valid_performance_summaries, val_loss, v_pplx)
+              summ_valid = tb.run_valid(sess, valid_performance_summaries, val_loss, val_acc, v_pplx)
               valid_summary_writer.add_summary(summ_valid, curr_step)
 
       if curr_step >= FLAGS.train_steps:
