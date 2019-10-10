@@ -14,8 +14,8 @@ import absl.logging as _logging  # pylint: disable=unused-import
 
 import tensorflow as tf
 
-#import data_utils
-import nlp_data_utils as data_utils
+import data_utils
+#import nlp_data_utils as data_utils
 import model_utils
 from gpu_utils import assign_to_gpu, average_grads_and_vars
 import function_builder
@@ -34,8 +34,6 @@ flags.DEFINE_integer("num_passes", default=1,
       help="Number of passed used for training.")
 flags.DEFINE_string("record_info_dir", default=None,
       help="Path to local directory containing `record_info-lm.json`.")
-flags.DEFINE_string("validation_record_info_dir", default=None,
-      help="Path to local directory containing `validation-record_info-lm.json`.")
 flags.DEFINE_string("model_dir", default=None,
       help="Estimator model_dir.")
 flags.DEFINE_string("init_checkpoint", default=None,
@@ -187,12 +185,11 @@ def initialize_mems_np(bsz_per_core):
 
   return mems_np
 
-
 def train(ps_device):
   ##### Get input function and model function
 
   train_input_fn, record_info_dict = data_utils.get_input_fn(
-      tfrecord_dir=FLAGS.record_info_dir,
+      tfrecord_dir=os.path.join(FLAGS.record_info_dir, "train"),
       split="train",
       bsz_per_host=FLAGS.train_batch_size,
       seq_len=FLAGS.seq_len,
@@ -207,7 +204,7 @@ def train(ps_device):
       num_predict=FLAGS.num_predict)
   
   valid_input_fn, record_info_dict_valid = data_utils.get_input_fn(
-          tfrecord_dir=FLAGS.validation_record_info_dir,
+          tfrecord_dir=os.path.join(FLAGS.record_info_dir, "valid"),
           split="valid",
           bsz_per_host=FLAGS.train_batch_size,
           seq_len=FLAGS.seq_len,
@@ -381,8 +378,10 @@ def train(ps_device):
         saver.save(sess, save_path)
         tf.logging.info("Model saved in path: {}".format(save_path))
       
+      # Validate model
       if curr_step > 0 and curr_step % FLAGS.val_iterations == 0:
           
+          # initialize mems
           v_tower_mems_np = []
           for i in range(FLAGS.num_core_per_host):
             v_mems_i_np = {}
@@ -411,12 +410,12 @@ def train(ps_device):
           except tf.errors.OutOfRangeError:
               val_loss = v_total_loss/v_steps
               v_pplx = math.exp(val_loss)
-              tf.logging.info("Validation: [{}] | loss {:.2f}".format(curr_step,
-                              val_loss))
+              tf.logging.info("Validation: [{}] | loss {:.2f} | pplx {:>7.2f}".format(curr_step,
+                              val_loss, v_pplx))
               
               summ_valid = sess.run(valid_performance_summaries, feed_dict={tf_valid_loss_ph:val_loss, tf_valid_pplx_ph:v_pplx})
               valid_summary_writer.add_summary(summ_valid, curr_step)
-      
+
       if curr_step >= FLAGS.train_steps:
         break
 

@@ -36,7 +36,8 @@ def main(_):
         mask_beta = params['mask_beta'] # mask beta
         '''
         
-        param_keys = ["use_tpu", "use_eop", "bsz_per_host", "input_file",
+        param_keys = ["use_tpu", "use_eop", "bsz_per_host", "train_filename",
+                      "valid_filename",
                       "data_dir", "save_dir", "seq_len", "reuse_len",
                       "bi_data", "num_predict", "mask_alpha", "mask_beta"]
         
@@ -48,7 +49,7 @@ def main(_):
         python = params['python'] # python cmd to be used
         assert python is not None
 
-        os.system(python +" nlp_data_utils.py " + args)
+        os.system(python +" data_utils.py " + args)
 
 if __name__ == "__main__":
         app.run(main)

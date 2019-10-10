@@ -110,3 +110,5 @@ models/
 proc_data/
 param_configs/ignore
 logging/
+.vscode/
+.DS_Store

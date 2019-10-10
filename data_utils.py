@@ -562,10 +562,9 @@ def _create_data(data_path):
     
     input_data, prot_ids = [], []
     prot_id = True
-    tf.compat.v1.logging.info("Processing {}".format(data_path))
     for line_cnt, line in enumerate(tf.io.gfile.GFile(data_path)):
         if line_cnt % 10000 == 0:
-            tf.compat.v1.logging.info("Loading line {}".format(line_cnt))
+            tf.logging.info("Loading line {}".format(line_cnt))
         
         if not line.strip():
             continue
@@ -584,11 +583,9 @@ def _create_data(data_path):
     input_data = np.array(input_data, dtype=np.int64)
     prot_ids = np.array(prot_ids, dtype=np.bool)
     
-    tfrecord_dir = os.path.join(FLAGS.save_dir, "tfrecords")
-    
     file_name, cur_num_batch = create_tfrecords(
-          save_dir=tfrecord_dir,
-          basename="{}".format(FLAGS.input_file.split('.')[0]),
+          save_dir=FLAGS.save_dir,
+          basename="{}".format(os.path.basename(data_path).split('.')[0]),
           data=(input_data, prot_ids),
           bsz_per_host=FLAGS.bsz_per_host,
           seq_len=FLAGS.seq_len,
@@ -611,21 +608,30 @@ def create_data(_):
     # Validate FLAGS
     assert FLAGS.bsz_per_host % FLAGS.num_core_per_host == 0
     
-    data_path = os.path.join(FLAGS.data_dir, FLAGS.input_file)
-    if not tf.io.gfile.exists(data_path):
-        tf.compat.v1.logging.error("File {} does not exist".format(data_path))
+    train_path = os.path.join(FLAGS.data_dir, FLAGS.train_filename)
+    valid_path = os.path.join(FLAGS.data_dir, FLAGS.valid_filename)
+    if not tf.io.gfile.exists(train_path):
+        tf.logging.error("File {} does not exist".format(train_path))
         return
     
-    # Make workdirs
-    if not tf.io.gfile.exists(FLAGS.save_dir):
-        tf.gfile.MakeDirs(FLAGS.save_dir)
+    if not tf.io.gfile.exists(train_path):
+        tf.logging.error("File {} does not exist".format(valid_path))
+        return
 
-    tfrecord_dir = os.path.join(FLAGS.save_dir, "tfrecords")
-    if not tf.io.gfile.exists(tfrecord_dir):
-        tf.gfile.MakeDirs(tfrecord_dir)
+    # Make workdirs
+    # train save dirs
+    train_save_path = os.path.join(FLAGS.save_dir, "train")
+    if not tf.io.gfile.exists(train_save_path):
+        tf.gfile.MakeDirs(train_save_path)
+
+    # valid save dirs
+    valid_save_path = os.path.join(FLAGS.save_dir, "valid")
+    if not tf.io.gfile.exists(valid_save_path):
+        tf.gfile.MakeDirs(valid_save_path)
     
-    
-    record_info = _create_data(data_path)
+
+    tf.logging.info("Processing training data \"{}\"".format(train_path))
+    record_info = _create_data(train_path)
     record_name = format_filename(
       prefix="record-info",
       bsz_per_host=FLAGS.bsz_per_host,
@@ -636,11 +642,27 @@ def create_data(_):
       bi_data=FLAGS.bi_data,
       suffix="json",
       fixed_num_predict=FLAGS.num_predict)
-    record_info_path = os.path.join(tfrecord_dir, record_name)
+    record_info_path = os.path.join(train_save_path, record_name)
     
     with tf.gfile.Open(record_info_path, "w") as fp:
         json.dump(record_info, fp)
     
+    tf.logging.info("Processing validation data \"{}\"".format(valid_path))
+    record_info = _create_data(valid_path)
+    record_name = format_filename(
+      prefix="record-info",
+      bsz_per_host=FLAGS.bsz_per_host,
+      seq_len=FLAGS.seq_len,
+      mask_alpha=FLAGS.mask_alpha,
+      mask_beta=FLAGS.mask_beta,
+      reuse_len=FLAGS.reuse_len,
+      bi_data=FLAGS.bi_data,
+      suffix="json",
+      fixed_num_predict=FLAGS.num_predict)
+    record_info_path = os.path.join(valid_save_path, record_name)
+    
+    with tf.gfile.Open(record_info_path, "w") as fp:
+        json.dump(record_info, fp)
 
 if __name__ == "__main__":
     flags = tf.app.flags
@@ -653,7 +675,8 @@ if __name__ == "__main__":
     flags.DEFINE_integer("num_core_per_host", 8, help="num TPU cores per host.")
     
     # Experiment config
-    flags.DEFINE_string("input_file", default="", help="Input filename.")
+    flags.DEFINE_string("train_filename", default="", help="Filename of training set.")
+    flags.DEFINE_string("valid_filename", default="", help="Filename of validation set.")
     flags.DEFINE_string("save_dir", default="proc_data",
                       help="Directory for saving the processed data.")
     flags.DEFINE_string("data_dir", default="data",
@@ -675,9 +698,7 @@ if __name__ == "__main__":
                        help="How many tokens to form a group.")
     flags.DEFINE_integer("mask_beta", default=1,
                        help="How many tokens to mask within each group.")
-    
-
     FLAGS = flags.FLAGS
     
     tf.logging.set_verbosity(tf.logging.INFO)
-    tf.compat.v1.app.run(create_data)
+    tf.app.run(create_data)
