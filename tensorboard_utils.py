@@ -41,8 +41,15 @@ def tensorboard_setup(logTrain=True, logValid=True):
             
         return tf.summary.merge([tf_training_loss_summary, tf_training_ppl_summary])
     
-def create_writers(sess, logTrain=True, logValid=True, logging_dir='logging/1/'):
+def create_writers(sess, logTrain=True, logValid=True, logging_dir='logging'):
     
+        i = len(os.listdir(logging_dir)) + 1
+        logging_dir = os.path.join(logging_dir, str(i))
+        while os.path.exists(logging_dir):
+            i += 1
+            logging_dir = os.path.join(logging_dir, str(i))
+        os.mkdir(logging_dir)
+        
         total_train_log_dir = os.path.join(logging_dir, "train")
         total_valid_log_dir = os.path.join(logging_dir, "valid")
         

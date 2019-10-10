@@ -50,5 +50,5 @@
 	"init": "normal",
 	"init_std": 0.02,
 	"init_range": 0.1,
-	"tb_logging_dir": "logging/2/"
+	"tb_logging_dir": "logging"
 }

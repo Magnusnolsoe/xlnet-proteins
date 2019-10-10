@@ -10,7 +10,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 import numpy as np
-import os
+import os, sys
 import json
 
 from segment_splitting import _split_a_and_b
@@ -266,7 +266,7 @@ def get_dataset(params, num_hosts, num_core_per_host, split, file_names,
 
     
 def get_input_fn(
-    tfrecord_dir,
+    info_dir,
     split,
     bsz_per_host,
     seq_len,
@@ -280,22 +280,27 @@ def get_input_fn(
     use_bfloat16=False,
     num_predict=None):
     
-    
-    record_glob = os.path.join(tfrecord_dir, "*.json")
+    basename = format_filename("record-info", bsz_per_host, seq_len,
+                                bi_data, "json", mask_alpha=mask_alpha,
+                                mask_beta=mask_beta, reuse_len=reuse_len,
+                                fixed_num_predict=num_predict)
+
+    record_info_path = os.path.join(info_dir, basename)
+
+    if not tf.io.gfile.exists(record_info_path):
+        tf.logging.error("File {} does not exist".format(record_info_path))
+
     record_info = {"num_batch": 0, "filenames": []}
 
-    tf.logging.info("Use the following tfrecord dirs: %s", tfrecord_dir)
-    tf.logging.info("Record glob: %s", record_glob)
+    tf.logging.info("Using the following record info dir: %s", info_dir)
+    tf.logging.info("Record info path: %s", record_info_path)
     
-    record_paths = sorted(tf.gfile.Glob(record_glob))
-    
-    for record_info_path in record_paths:
-        with tf.gfile.Open(record_info_path, "r") as fp:
-            info = json.load(fp)
-            
-            record_info["num_batch"] += info["num_batch"]
-            record_info["filenames"] += info["filenames"]
-    
+    with tf.gfile.Open(record_info_path, "r") as fp:
+        info = json.load(fp)
+        
+        record_info["num_batch"] += info["num_batch"]
+        record_info["filenames"] += info["filenames"]
+
     tf.logging.info("Total number of batches: %d",
                     record_info["num_batch"])
     tf.logging.info("Total number of files: %d",

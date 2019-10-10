@@ -193,7 +193,7 @@ def train(ps_device):
   ##### Get input function and model function
 
   train_input_fn, record_info_dict = data_utils.get_input_fn(
-      tfrecord_dir=os.path.join(FLAGS.record_info_dir, "train"),
+      info_dir=os.path.join(FLAGS.record_info_dir, "train"),
       split="train",
       bsz_per_host=FLAGS.train_batch_size,
       seq_len=FLAGS.seq_len,
@@ -208,7 +208,7 @@ def train(ps_device):
       num_predict=FLAGS.num_predict)
   
   valid_input_fn, record_info_dict_valid = data_utils.get_input_fn(
-          tfrecord_dir=os.path.join(FLAGS.record_info_dir, "valid"),
+          info_dir=os.path.join(FLAGS.record_info_dir, "valid"),
           split="valid",
           bsz_per_host=FLAGS.train_batch_size,
           seq_len=FLAGS.seq_len,
