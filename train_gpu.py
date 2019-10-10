@@ -14,11 +14,11 @@ import absl.logging as _logging  # pylint: disable=unused-import
 
 import tensorflow as tf
 
-#import data_utils
-import nlp_data_utils as data_utils
+import data_utils
 import model_utils
 from gpu_utils import assign_to_gpu, average_grads_and_vars
 import function_builder
+import tensorboard_utils as tb
 
 
 # GPU config
@@ -131,6 +131,10 @@ flags.DEFINE_float("init_std", default=0.02,
       help="Initialization std when init is normal.")
 flags.DEFINE_float("init_range", default=0.1,
       help="Initialization std when init is uniform.")
+
+# Logging config
+flags.DEFINE_string("tb_logging_dir", default="logging/1/",
+                    help="The directory to save the logs for Tensorboard.")
 
 
 FLAGS = flags.FLAGS
@@ -323,23 +327,9 @@ def train(ps_device):
   gpu_options = tf.GPUOptions(allow_growth=True)
 
   model_utils.init_from_checkpoint(FLAGS, global_vars=True)
-  
-  with tf.name_scope('training'):
-        tf_training_loss_ph = tf.placeholder(tf.float32,shape=None, name='training-loss')
-        tf_training_loss_summary = tf.summary.scalar('training_loss', tf_training_loss_ph)
-       
-        tf_training_pplx_ph = tf.placeholder(tf.float32,shape=None, name='training_ppl')
-        tf_training_ppl_summary = tf.summary.scalar('training_pplx', tf_training_pplx_ph)
         
-  with tf.name_scope('validation'):
-        tf_valid_loss_ph = tf.placeholder(tf.float32,shape=None, name='validation-loss')
-        tf_valid_loss_summary = tf.summary.scalar('validation_loss', tf_valid_loss_ph)
-       
-        tf_valid_pplx_ph = tf.placeholder(tf.float32,shape=None, name='validation_ppl')
-        tf_valid_ppl_summary = tf.summary.scalar('validation_pplx', tf_valid_pplx_ph)
-        
-  training_performance_summaries = tf.summary.merge([tf_training_loss_summary, tf_training_ppl_summary])
-  valid_performance_summaries = tf.summary.merge([tf_valid_loss_summary, tf_valid_ppl_summary])
+  # Create performance summaries for Tensorboard logging
+  training_performance_summaries, valid_performance_summaries = tb.tensorboard_setup()
 
   with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,
       gpu_options=gpu_options)) as sess:
@@ -347,12 +337,9 @@ def train(ps_device):
 
     fetches = [loss, tower_new_mems, global_step, gnorm, learning_rate, train_op]
     
-    train_log_dir = 'logging/1/train'
-    train_summary_writer = tf.summary.FileWriter(train_log_dir, sess.graph)
+    # Create writers for Tensorboard logging
+    train_summary_writer, valid_summary_writer = tb.create_writers(sess, logging_dir=FLAGS.tb_logging_dir)
     
-    valid_log_dir = 'logging/1/valid'
-    valid_summary_writer = tf.summary.FileWriter(valid_log_dir, sess.graph)
-
     total_loss, prev_step = 0., -1
     while True:
       feed_dict = {}
@@ -368,7 +355,7 @@ def train(ps_device):
 
       if curr_step > 0 and curr_step % FLAGS.iterations == 0:
         curr_loss = total_loss / (curr_step - prev_step)
-        summ = sess.run(training_performance_summaries, feed_dict={tf_training_loss_ph:curr_loss, tf_training_pplx_ph:math.exp(curr_loss)})
+        summ = tb.run_train(sess, training_performance_summaries, curr_loss)
         train_summary_writer.add_summary(summ, curr_step)
         tf.logging.info("[{}] | gnorm {:.2f} lr {:8.6f} "
             "| loss {:.2f} | pplx {:>7.2f}, bpc {:>7.4f}".format(
@@ -414,7 +401,7 @@ def train(ps_device):
               tf.logging.info("Validation: [{}] | loss {:.2f}".format(curr_step,
                               val_loss))
               
-              summ_valid = sess.run(valid_performance_summaries, feed_dict={tf_valid_loss_ph:val_loss, tf_valid_pplx_ph:v_pplx})
+              summ_valid = tb.run_valid(sess, valid_performance_summaries, val_loss, v_pplx)
               valid_summary_writer.add_summary(summ_valid, curr_step)
       
       if curr_step >= FLAGS.train_steps:

@@ -35,7 +35,7 @@ def main(_):
                       "d_inner",
                       "dropout", "dropatt", "untie_r", "summary_type",
                       "ff_activation", "use_bfloat16", "init", "init_std",
-                      "init_range"]
+                      "init_range", "tb_logging_dir"]
         
         args = ""
         for key in param_keys:

@@ -48,5 +48,6 @@
 	"use_bfloat16": true,
 	"init": "normal/uniform",
 	"init_std": 0.0,
-	"init_range": 0.0
+	"init_range": 0.0,
+	"tb_logging_dir": ""
 }
