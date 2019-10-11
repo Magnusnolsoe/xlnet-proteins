@@ -20,8 +20,13 @@ def main(_):
         
         param_keys = ["record_info_dir", "num_core_per_host", "bsz_per_host",
                       "seq_len", "reuse_len", "bi_data", "mask_alpha", "mask_beta",
-                      "num_predict", "perm_size", "use_bfloat16", "n_token",
-                      "model_dir", "model_name"]
+                      "num_predict", "perm_size", "n_token",
+                      "init_checkpoint", "use_tpu", "mem_len", "n_layer",
+                      "d_model","d_embed", "n_head", "d_head", "d_inner",
+                      "dropout", "dropatt", "untie_r", "summary_type", 
+                      "ff_activation", "use_bfloat16", "model_dir",
+                      "init", "init_std", "init_range", "same_length",
+                      "clamp_len"]
         
         args = ""
         for key in param_keys:

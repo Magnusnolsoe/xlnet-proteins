@@ -70,7 +70,8 @@ def two_stream_loss(FLAGS, features, labels, mems, is_training):
 
   # target mask for LM loss
   tgt_mask = tf.transpose(features["target_mask"], [1, 0])
-
+  
+  
   # construct xlnet config and save to model_dir
   xlnet_config = xlnet.XLNetConfig(FLAGS=FLAGS)
   xlnet_config.to_json(os.path.join(FLAGS.model_dir, "config.json"))
