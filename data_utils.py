@@ -601,12 +601,17 @@ def create_data(_):
     
     train_path = os.path.join(FLAGS.data_dir, FLAGS.train_filename)
     valid_path = os.path.join(FLAGS.data_dir, FLAGS.valid_filename)
+    test_path = os.path.join(FLAGS.data_dir, FLAGS.test_filename)
     if not tf.io.gfile.exists(train_path):
         tf.logging.error("File {} does not exist".format(train_path))
         return
     
-    if not tf.io.gfile.exists(train_path):
+    if not tf.io.gfile.exists(valid_path):
         tf.logging.error("File {} does not exist".format(valid_path))
+        return
+    
+    if not tf.io.gfile.exists(test_path):
+        tf.logging.error("File {} does not exist".format(test_path))
         return
 
     # Make workdirs
@@ -619,6 +624,11 @@ def create_data(_):
     valid_save_path = os.path.join(FLAGS.save_dir, "valid")
     if not tf.io.gfile.exists(valid_save_path):
         tf.gfile.MakeDirs(valid_save_path)
+
+    # test save dirs
+    test_save_path = os.path.join(FLAGS.save_dir, "test")
+    if not tf.io.gfile.exists(test_save_path):
+        tf.gfile.MakeDirs(test_save_path)
     
 
     tf.logging.info("Processing training data \"{}\"".format(train_path))
@@ -655,6 +665,23 @@ def create_data(_):
     with tf.gfile.Open(record_info_path, "w") as fp:
         json.dump(record_info, fp)
 
+    tf.logging.info("Processing validation data \"{}\"".format(test_path))
+    record_info = _create_data(test_path)
+    record_name = format_filename(
+      prefix="record-info",
+      bsz_per_host=FLAGS.bsz_per_host,
+      seq_len=FLAGS.seq_len,
+      mask_alpha=FLAGS.mask_alpha,
+      mask_beta=FLAGS.mask_beta,
+      reuse_len=FLAGS.reuse_len,
+      bi_data=FLAGS.bi_data,
+      suffix="json",
+      fixed_num_predict=FLAGS.num_predict)
+    record_info_path = os.path.join(test_save_path, record_name)
+    
+    with tf.gfile.Open(record_info_path, "w") as fp:
+        json.dump(record_info, fp)
+
 if __name__ == "__main__":
     flags = tf.app.flags
     
@@ -668,6 +695,7 @@ if __name__ == "__main__":
     # Experiment config
     flags.DEFINE_string("train_filename", default="", help="Filename of training set.")
     flags.DEFINE_string("valid_filename", default="", help="Filename of validation set.")
+    flags.DEFINE_string("test_filename", default="", help="Filename of test set.")
     flags.DEFINE_string("save_dir", default="proc_data",
                       help="Directory for saving the processed data.")
     flags.DEFINE_string("data_dir", default="data",

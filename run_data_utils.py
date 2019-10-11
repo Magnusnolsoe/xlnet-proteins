@@ -37,7 +37,7 @@ def main(_):
         '''
         
         param_keys = ["use_tpu", "use_eop", "bsz_per_host", "train_filename",
-                      "valid_filename",
+                      "valid_filename", "test_filename",
                       "data_dir", "save_dir", "seq_len", "reuse_len",
                       "bi_data", "num_predict", "mask_alpha", "mask_beta"]
         
