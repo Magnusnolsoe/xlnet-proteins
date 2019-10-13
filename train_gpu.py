@@ -20,7 +20,6 @@ from gpu_utils import assign_to_gpu, average_grads_and_vars
 import function_builder
 import tensorboard_utils as tb
 
-
 # GPU config
 flags.DEFINE_integer("num_hosts", default=1,
       help="Number of hosts")
@@ -418,6 +417,9 @@ def main(unused_argv):
 
   if not tf.gfile.Exists(FLAGS.model_dir):
     tf.gfile.MakeDirs(FLAGS.model_dir)
+    
+  if not tf.gfile.Exists(FLAGS.tb_logging_dir):
+    tf.gfile.MakeDirs(FLAGS.tb_logging_dir)
 
   train("/gpu:0")
 

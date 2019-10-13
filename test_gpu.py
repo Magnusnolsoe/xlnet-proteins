@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
+import tensorboard_utils as tb
 import os
 import numpy as np
 import math
@@ -93,6 +94,10 @@ flags.DEFINE_float("init_std", default=0.02,
       help="Initialization std when init is normal.")
 flags.DEFINE_float("init_range", default=0.1,
       help="Initialization std when init is uniform.")
+
+# Logging config
+flags.DEFINE_string("tb_logging_dir", default="logging/1/",
+                    help="The directory to save the logs for Tensorboard.")
 
 FLAGS = flags.FLAGS
 
@@ -210,9 +215,15 @@ def test(ps_device):
 
     model_utils.init_from_checkpoint(FLAGS, global_vars=True)
 
+    # Create performance summaries for Tensorboard logging
+    test_performance_summaries = tb.tensorboard_setup_test()
+
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,
         gpu_options=gpu_options)) as sess:
         sess.run(tf.global_variables_initializer())
+
+        # Create writers for Tensorboard logging
+        test_summary_writer = tb.create_test_writer(sess, logging_dir=FLAGS.tb_logging_dir)
 
         # initialize mems
         v_tower_mems_np = []
@@ -243,13 +254,13 @@ def test(ps_device):
                 print(v_steps)
             
         except tf.errors.OutOfRangeError:
-            val_loss = v_total_loss/v_steps
-            v_pplx = math.exp(val_loss)
-            tf.logging.info("Validation: loss {:.2f} | pplx {:>7.2f}".format(
-                            val_loss, v_pplx))
+            test_loss = v_total_loss/v_steps
+            t_pplx = math.exp(test_loss)
+            tf.logging.info("Test: loss {:.2f} | pplx {:>7.2f}".format(
+                            test_loss, t_pplx))
             
-            #summ_valid = tb.run_valid(sess, valid_performance_summaries, val_loss, v_pplx)
-            #valid_summary_writer.add_summary(summ_valid, curr_step)
+            summ_test = tb.run_test(sess, test_performance_summaries, test_loss, t_pplx)
+            test_summary_writer.add_summary(summ_test, 1)
 
 def main(unused_argv):
     del unused_argv  # Unused
