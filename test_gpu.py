@@ -104,7 +104,7 @@ FLAGS = flags.FLAGS
 def get_model_fn():
   def model_fn(features, labels, mems):
     #### Get loss from inputs
-    total_loss, new_mems, monitor_dict = function_builder.get_loss(
+    total_loss, total_accuracy, new_mems, monitor_dict = function_builder.get_loss(
         FLAGS, features, labels, mems, False)
 
     #### Check model parameters
@@ -113,7 +113,7 @@ def get_model_fn():
 
     # GPU
     #assert is_training
-    return total_loss, new_mems
+    return total_loss, total_accuracy, new_mems
 
   return model_fn
 
@@ -185,7 +185,7 @@ def test(ps_device):
         t_examples = [t_example]
 
     ##### Create computational graph
-    v_tower_mems, v_tower_losses, v_tower_new_mems = [], [], []
+    v_tower_mems, v_tower_losses, v_tower_accs, v_tower_new_mems = [], [], [], []
 
     for i in range(FLAGS.num_core_per_host):
         reuse = True if i > 0 else None
@@ -197,19 +197,22 @@ def test(ps_device):
             if FLAGS.mem_len:
                 v_mems_i["mems"] = create_mems_tf(bsz_per_core)
             
-            v_loss_i, v_new_mems_i = single_core_graph(
+            v_loss_i, v_acc_i, v_new_mems_i = single_core_graph(
                 features=t_examples[i],
                 mems=v_mems_i)
             
             v_tower_mems.append(v_mems_i)
             v_tower_losses.append(v_loss_i)
+            v_tower_accs.append(v_acc_i)
             v_tower_new_mems.append(v_new_mems_i)
 
     ## average losses and gradients across towers
     if len(v_tower_losses) > 1:
-        v_loss = tf.add_n(v_tower_losses) / len(v_tower_losses)
+      v_loss = tf.add_n(v_tower_losses) / len(v_tower_losses)
+      v_acc = tf.add_n(v_tower_accs) / len(v_tower_accs)
     else:
-        v_loss = v_tower_losses[0]
+      v_loss = v_tower_losses[0]
+      v_acc = v_tower_accs[0]
 
     gpu_options = tf.GPUOptions(allow_growth=True)
 
@@ -233,10 +236,10 @@ def test(ps_device):
             v_mems_i_np[key] = initialize_mems_np(bsz_per_core)
             v_tower_mems_np.append(v_mems_i_np)
         
-        v_fetches = [v_loss, v_tower_new_mems]
+        v_fetches = [v_loss, v_acc, v_tower_new_mems]
         
         sess.run(t_iter.initializer)
-        v_total_loss = 0.
+        v_total_loss, v_total_acc = 0., 0.
         v_steps = 0
 
         try:
@@ -248,18 +251,20 @@ def test(ps_device):
                             v_feed_dict[m] = m_np
                     
                 v_fetched = sess.run(v_fetches, feed_dict=v_feed_dict)
-                v_loss_np, v_tower_mems_np = v_fetched[:]
+                v_loss_np, v_acc_np, v_tower_mems_np = v_fetched[:]
                 v_total_loss += v_loss_np
+                v_total_acc += v_acc_np
                 v_steps += 1
                 print(v_steps)
             
         except tf.errors.OutOfRangeError:
             test_loss = v_total_loss/v_steps
             t_pplx = math.exp(test_loss)
-            tf.logging.info("Test: loss {:.2f} | pplx {:>7.2f}".format(
-                            test_loss, t_pplx))
+            t_acc = v_total_acc/v_steps
+            tf.logging.info("Test: loss {:.2f} | accuracy {:.2f} | pplx {:>7.2f}".format(
+                            test_loss, t_acc,  t_pplx))
             
-            summ_test = tb.run_test(sess, test_performance_summaries, test_loss, t_pplx)
+            summ_test = tb.run_test(sess, test_performance_summaries, test_loss, t_acc, t_pplx)
             test_summary_writer.add_summary(summ_test, 1)
 
 def main(unused_argv):

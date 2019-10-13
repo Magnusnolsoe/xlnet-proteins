@@ -617,7 +617,8 @@ def create_data(_):
 
     # train save dirs
     train_save_path = os.path.join(FLAGS.save_dir, "train")
-    assert tf.io.gfile.exists(train_save_path)
+    if not tf.io.gfile.exists(train_save_path):
+        tf.gfile.MakeDirs(train_save_path)
 
     # valid save dirs
     valid_save_path = os.path.join(FLAGS.save_dir, "valid")
