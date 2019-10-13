@@ -673,7 +673,8 @@ def lm_loss(hidden, target, n_token, d_model, initializer, lookup_table=None,
                                 initializer=tf.zeros_initializer())
 
     logits = tf.einsum('ibd,nd->ibn', hidden, softmax_w) + softmax_b
-
+    preds = tf.cast(tf.argmax(input=logits, axis=2), dtype=tf.int32)
+    
     if use_tpu:
       one_hot_target = tf.one_hot(target, n_token, dtype=logits.dtype)
       loss = -tf.reduce_sum(tf.nn.log_softmax(logits) * one_hot_target, -1)
@@ -681,7 +682,7 @@ def lm_loss(hidden, target, n_token, d_model, initializer, lookup_table=None,
       loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=target,
                                                             logits=logits)
 
-    return loss
+    return loss, preds
 
 
 def summarize_sequence(summary_type, hidden, d_model, n_head, d_head, dropout,

@@ -273,8 +273,7 @@ def get_input_fn(
 
     record_info_path = os.path.join(info_dir, basename)
 
-    if not tf.io.gfile.exists(record_info_path):
-        tf.logging.error("File {} does not exist".format(record_info_path))
+    assert tf.io.gfile.exists(record_info_path)
 
     record_info = {"num_batch": 0, "filenames": []}
 
@@ -615,10 +614,10 @@ def create_data(_):
         return
 
     # Make workdirs
+
     # train save dirs
     train_save_path = os.path.join(FLAGS.save_dir, "train")
-    if not tf.io.gfile.exists(train_save_path):
-        tf.gfile.MakeDirs(train_save_path)
+    assert tf.io.gfile.exists(train_save_path)
 
     # valid save dirs
     valid_save_path = os.path.join(FLAGS.save_dir, "valid")

@@ -43,7 +43,6 @@ def construct_scalar_host_call(
 
   return host_call_fn, [global_step_tensor] + other_tensors
 
-
 def two_stream_loss(FLAGS, features, labels, mems, is_training):
   """Pretraining loss with two-stream attention Transformer-XL."""
 
@@ -98,7 +97,7 @@ def two_stream_loss(FLAGS, features, labels, mems, is_training):
 
   with tf.variable_scope("model", reuse=tf.AUTO_REUSE):
     # LM loss
-    lm_loss = modeling.lm_loss(
+    lm_loss, preds = modeling.lm_loss(
         hidden=output,
         target=tgt,
         n_token=xlnet_config.n_token,
@@ -116,10 +115,19 @@ def two_stream_loss(FLAGS, features, labels, mems, is_training):
     tgt_mask = tf.cast(tgt_mask, tf.float32)
     lm_loss = tf.cast(lm_loss, tf.float32)
 
-  total_loss = tf.reduce_sum(lm_loss * tgt_mask) / tf.reduce_sum(tgt_mask)
-  monitor_dict["total_loss"] = total_loss
+  # correct predictions [num_predict x bsz]
+    # 0. not correct prediction
+    # 1. correct prediction
+  correct = tf.cast(tf.math.equal(tgt, preds), dtype=tf.float32)
 
-  return total_loss, new_mems, monitor_dict
+  tgt_sum = tf.reduce_sum(tgt_mask)
+  total_acc = tf.reduce_sum(correct * tgt_mask) / tgt_sum
+  total_loss = tf.reduce_sum(lm_loss * tgt_mask) / tgt_sum
+
+  monitor_dict["total_loss"] = total_loss
+  monitor_dict["total_acc"] = total_acc
+
+  return total_loss, total_acc, new_mems, monitor_dict
 
 
 def get_loss(FLAGS, features, labels, mems, is_training):
