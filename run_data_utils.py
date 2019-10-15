@@ -11,6 +11,8 @@ from absl import flags, app
 
 flags.DEFINE_string('config', default=None,
       help='Parameter config file')
+flags.DEFINE_bool('split', default=False,
+      help='Parameter config file')
 FLAGS = flags.FLAGS
 
 
@@ -49,7 +51,10 @@ def main(_):
         python = params['python'] # python cmd to be used
         assert python is not None
 
-        os.system(python +" data_utils.py " + args)
+        if FLAGS.split:
+            os.system(python +" data_utils.py " + args)
+        else:
+            os.system(python +" data_utils_no_split.py " + args)
 
 if __name__ == "__main__":
         app.run(main)
