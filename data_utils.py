@@ -49,8 +49,6 @@ def parse_files_to_dataset(parser, file_names, split, num_batch, num_hosts,
     # is not helpful. It will use a lot of memory and lead to contrainer OOM.
     # So, change to cache non-parsed raw data instead.
     dataset = dataset.cache().map(parser)
-    if split == "train":
-        dataset = dataset.repeat()
     dataset = dataset.batch(bsz_per_core, drop_remainder=True)
     dataset = dataset.prefetch(num_core_per_host * bsz_per_core)
     
@@ -665,7 +663,7 @@ def create_data(_):
     with tf.gfile.Open(record_info_path, "w") as fp:
         json.dump(record_info, fp)
 
-    tf.logging.info("Processing validation data \"{}\"".format(test_path))
+    tf.logging.info("Processing test data \"{}\"".format(test_path))
     record_info = _create_data(test_path)
     record_name = format_filename(
       prefix="record-info",

@@ -58,12 +58,10 @@ flags.DEFINE_float("weight_decay", default=0.0,
 # Training config
 flags.DEFINE_integer("train_batch_size", default=16,
       help="Size of train batch.")
-flags.DEFINE_integer("train_steps", default=100000,
-      help="Total number of training steps.")
-flags.DEFINE_integer("iterations", default=1000,
-      help="Number of iterations per repeat loop.")
-flags.DEFINE_integer("val_iterations", default=1000,
-      help="Number of iterations per validation.")
+flags.DEFINE_integer("epochs", default=100,
+      help="Total number of epochs.")
+flags.DEFINE_integer("log_steps", default=1000,
+      help="Number of steps for logging training performance.")
 flags.DEFINE_integer("save_steps", default=None,
       help="number of steps for model checkpointing.")
 
@@ -222,6 +220,7 @@ def train(ps_device):
           num_predict=FLAGS.num_predict)
 
   # for key, info in record_info_dict.items():
+  num_train_batches = record_info_dict["num_batch"]
   tf.logging.info("num of train batches {}".format(record_info_dict["num_batch"]))
   tf.logging.info("num of validation batches {}".format(record_info_dict_valid["num_batch"]))
   
@@ -234,7 +233,8 @@ def train(ps_device):
   train_set = train_input_fn(params)
   valid_set = valid_input_fn(params)
 
-  example = train_set.make_one_shot_iterator().get_next()
+  t_iter = train_set.make_initializable_iterator()
+  example = t_iter.get_next()
   v_iter = valid_set.make_initializable_iterator()
   v_example = v_iter.get_next()
 
@@ -306,17 +306,21 @@ def train(ps_device):
 
   ## get train op
   train_op, learning_rate, gnorm = model_utils.get_train_op(FLAGS, None,
-      grads_and_vars=grads_and_vars)
+      num_train_batches, grads_and_vars=grads_and_vars)
   global_step = tf.train.get_global_step()
 
   ##### Training loop
   # initialize mems
   tower_mems_np = []
+  v_tower_mems_np = []
   for i in range(FLAGS.num_core_per_host):
     mems_i_np = {}
+    v_mems_i_np = {}
     for key in tower_mems[i].keys():
       mems_i_np[key] = initialize_mems_np(bsz_per_core)
+      v_mems_i_np[key] = initialize_mems_np(bsz_per_core)
     tower_mems_np.append(mems_i_np)
+    v_tower_mems_np.append(v_mems_i_np)
 
   saver = tf.train.Saver()
 
@@ -330,59 +334,55 @@ def train(ps_device):
   with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,
       gpu_options=gpu_options)) as sess:
     sess.run(tf.global_variables_initializer())
-
+    
+    # variables that are run in the session
     fetches = [loss, tower_new_mems, global_step, gnorm, learning_rate, train_op]
+    v_fetches = [v_loss, v_tower_new_mems]
     
     # Create writers for Tensorboard logging
     train_summary_writer, valid_summary_writer = tb.create_writers(sess, logging_dir=FLAGS.tb_logging_dir)
     
     total_loss, prev_step = 0., -1
-    while True:
-      feed_dict = {}
-      for i in range(FLAGS.num_core_per_host):
-        for key in tower_mems_np[i].keys():
-          for m, m_np in zip(tower_mems[i][key], tower_mems_np[i][key]):
-            feed_dict[m] = m_np
+    for i in range(FLAGS.epochs):
 
-      fetched = sess.run(fetches, feed_dict=feed_dict)
-
-      loss_np, tower_mems_np, curr_step = fetched[:3]
-      total_loss += loss_np
-
-      # Log training progress
-      if curr_step > 0 and curr_step % FLAGS.iterations == 0:
-        curr_loss = total_loss / (curr_step - prev_step)
-        summ = tb.run_train(sess, training_performance_summaries, curr_loss)
-        train_summary_writer.add_summary(summ, curr_step)
-        tf.logging.info("[{}] | gnorm {:.2f} lr {:8.6f} "
-            "| loss {:.2f} | pplx {:>7.2f}, bpc {:>7.4f}".format(
-            curr_step, fetched[-3], fetched[-2],
-            curr_loss, math.exp(curr_loss), curr_loss / math.log(2)))
-        total_loss, prev_step = 0., curr_step
-
-      # Save checkpoint
-      if curr_step > 0 and curr_step % FLAGS.save_steps == 0:
-        save_path = os.path.join(FLAGS.model_dir, "model.ckpt")
-        saver.save(sess, save_path)
-        tf.logging.info("Model saved in path: {}".format(save_path))
-      
-      # Validate model
-      if curr_step > 0 and curr_step % FLAGS.val_iterations == 0:
-          
-          # initialize mems
-          v_tower_mems_np = []
-          for i in range(FLAGS.num_core_per_host):
-            v_mems_i_np = {}
-            for key in v_tower_mems[i].keys():
-              v_mems_i_np[key] = initialize_mems_np(bsz_per_core)
-            v_tower_mems_np.append(v_mems_i_np)
-          
-          v_fetches = [v_loss, v_tower_new_mems]
-          
-          sess.run(v_iter.initializer)
-          v_total_loss = 0.
-          v_steps = 0
+          # Train loop
           try:
+                sess.run(t_iter.initializer)
+                while True:
+                      feed_dict = {}
+                      for i in range(FLAGS.num_core_per_host):
+                        for key in tower_mems_np[i].keys():
+                          for m, m_np in zip(tower_mems[i][key], tower_mems_np[i][key]):
+                            feed_dict[m] = m_np
+                      
+                      fetched = sess.run(fetches, feed_dict=feed_dict)
+                      loss_np, tower_mems_np, curr_step = fetched[:3]
+                      total_loss += loss_np
+
+                      # Log training progress
+                      if curr_step > 0 and curr_step % FLAGS.log_steps == 0:
+                        curr_loss = total_loss / (curr_step - prev_step)
+                        summ = tb.run_train(sess, training_performance_summaries, curr_loss)
+                        train_summary_writer.add_summary(summ, curr_step)
+                        tf.logging.info("[{}] | gnorm {:.2f} lr {:8.6f} "
+                              "| loss {:.2f} | pplx {:>7.2f}, bpc {:>7.4f}".format(
+                              curr_step, fetched[-3], fetched[-2],
+                              curr_loss, math.exp(curr_loss), curr_loss / math.log(2)))
+                        total_loss, prev_step = 0., curr_step
+
+                      # Save checkpoint
+                      if curr_step > 0 and FLAGS.save_steps is not None and curr_step % FLAGS.save_steps == 0:
+                        save_path = os.path.join(FLAGS.model_dir, "model.ckpt")
+                        saver.save(sess, save_path)
+                        tf.logging.info("Model saved in path: {}".format(save_path))
+
+          except tf.errors.OutOfRangeError:
+                pass
+          
+          # Validation loop
+          try:
+              sess.run(v_iter.initializer)
+              v_total_loss, v_steps = 0., 0
               while True:
                   v_feed_dict = {}
                   for i in range(FLAGS.num_core_per_host):
@@ -403,9 +403,9 @@ def train(ps_device):
               
               summ_valid = tb.run_valid(sess, valid_performance_summaries, val_loss, v_pplx)
               valid_summary_writer.add_summary(summ_valid, curr_step)
+          
+          tf.logging.info("------------ Epoch {} ------------".format(i))
 
-      if curr_step >= FLAGS.train_steps:
-        break
 
 
 def main(unused_argv):

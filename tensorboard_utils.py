@@ -56,10 +56,11 @@ def tensorboard_setup_test():
 def create_writers(sess, logTrain=True, logValid=True, logging_dir='logging'):
     
         i = len(os.listdir(logging_dir)) + 1
-        logging_dir = os.path.join(logging_dir, str(i))
-        while os.path.exists(logging_dir):
+        logging_dir_n = os.path.join(logging_dir, str(i))
+        while os.path.exists(logging_dir_n):
             i += 1
-            logging_dir = os.path.join(logging_dir, str(i))
+            logging_dir_n = os.path.join(logging_dir, str(i))
+        logging_dir = logging_dir_n
         os.mkdir(logging_dir)
         
         total_train_log_dir = os.path.join(logging_dir, "train")
