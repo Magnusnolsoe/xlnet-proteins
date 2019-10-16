@@ -37,6 +37,8 @@ flags.DEFINE_string("model_dir", default=None,
       help="Estimator model_dir.")
 flags.DEFINE_string("init_checkpoint", default=None,
       help="checkpoint path for initializing the model.")
+flags.DEFINE_string("run_id", default=None,
+      help="Id of current training run.")
 
 # Optimization config
 flags.DEFINE_float("learning_rate", default=1e-4,
@@ -340,7 +342,8 @@ def train(ps_device):
     v_fetches = [v_loss, v_tower_new_mems]
     
     # Create writers for Tensorboard logging
-    train_summary_writer, valid_summary_writer = tb.create_writers(sess, logging_dir=FLAGS.tb_logging_dir)
+    train_summary_writer, valid_summary_writer = tb.create_writers(sess, logging_dir=FLAGS.tb_logging_dir,
+                                                      id=FLAGS.run_id)
     
     total_loss, prev_step = 0., -1
     for i in range(FLAGS.epochs):

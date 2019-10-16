@@ -20,7 +20,7 @@ def main(_):
         params = json.load(config_file)
         
         
-        param_keys = ["num_hosts", "num_core_per_host",
+        param_keys = ["run_id","num_hosts", "num_core_per_host",
                       "use_tpu", "num_passes",
                       "record_info_dir", "model_dir", "init_checkpoint",
                       "learning_rate","clip", "min_lr_ratio", "warmup_steps",

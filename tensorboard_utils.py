@@ -3,6 +3,7 @@
 import tensorflow as tf
 import os
 import math
+import json
 
 tf_training_loss_ph = tf.placeholder(tf.float32,shape=None, name='training-loss')
 tf_training_pplx_ph = tf.placeholder(tf.float32,shape=None, name='training_ppl')
@@ -53,7 +54,7 @@ def tensorboard_setup_test():
             
     return tf.summary.merge([tf_test_loss_summary, tf_test_acc_summary, tf_test_ppl_summary])
 
-def create_writers(sess, logTrain=True, logValid=True, logging_dir='logging'):
+def create_writers(sess, logTrain=True, logValid=True, logging_dir='logging', **kwargs):
     
         i = len(os.listdir(logging_dir)) + 1
         logging_dir_n = os.path.join(logging_dir, str(i))
@@ -63,6 +64,9 @@ def create_writers(sess, logTrain=True, logValid=True, logging_dir='logging'):
         logging_dir = logging_dir_n
         os.mkdir(logging_dir)
         
+        with tf.gfile.Open(os.path.join(logging_dir, "info.json"), "w") as fp:
+            json.dump(kwargs, fp)
+
         total_train_log_dir = os.path.join(logging_dir, "train")
         total_valid_log_dir = os.path.join(logging_dir, "valid")
         
