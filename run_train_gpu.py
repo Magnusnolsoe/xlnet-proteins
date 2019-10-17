@@ -25,7 +25,7 @@ def main(_):
                       "record_info_dir", "model_dir", "init_checkpoint",
                       "learning_rate","clip", "min_lr_ratio", "warmup_steps",
                       "adam_epsilon", "decay_method", "weight_decay", 
-                      "bsz_per_host", "epochs", "log_steps", "save_steps",
+                      "train_batch_size", "epochs", "log_steps", "save_steps",
                       "seq_len", "reuse_len", 
                       "bi_data", "mask_alpha", "mask_beta", "num_predict", 
                       "perm_size","n_token", "mem_len", "same_length", 
@@ -37,10 +37,7 @@ def main(_):
         args = ""
         for key in param_keys:
             if params[key] is not None:
-                if key == "bsz_per_host":
-                    args += "--train_batch_size={} ".format(params[key])
-                else:
-                    args += "--{}={} ".format(key, params[key])
+                args += "--{}={} ".format(key, params[key])
 
         
         python = params['python']
