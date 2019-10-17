@@ -175,6 +175,7 @@ def get_model_fn():
         FLAGS, total_loss, None)
     monitor_dict["lr"] = learning_rate
     monitor_dict["gnorm"] = gnorm
+    monitor_dict['pplx'] = tf.math.exp(total_loss)
 
     #### Customized initial checkpoint
     scaffold_fn = model_utils.init_from_checkpoint(FLAGS, global_vars=True)
