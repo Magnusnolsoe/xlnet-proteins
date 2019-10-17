@@ -33,7 +33,7 @@ SEP_ID = special_symbols["<sep>"]
 
 
 def parse_files_to_dataset(parser, file_names, split, num_batch, num_hosts,
-                           host_id, num_core_per_host, bsz_per_core):
+                           host_id, num_core_per_host, bsz_per_core, use_tpu=False):
     
     
     #assert split == "train"
@@ -49,6 +49,8 @@ def parse_files_to_dataset(parser, file_names, split, num_batch, num_hosts,
     # is not helpful. It will use a lot of memory and lead to contrainer OOM.
     # So, change to cache non-parsed raw data instead.
     dataset = dataset.cache().map(parser)
+    if use_tpu:
+        dataset = dataset.repeat()
     dataset = dataset.batch(bsz_per_core, drop_remainder=True)
     dataset = dataset.prefetch(num_core_per_host * bsz_per_core)
     
@@ -135,7 +137,7 @@ def _local_perm(inputs, targets, is_masked, perm_size, seq_len):
 
 def get_dataset(params, num_hosts, num_core_per_host, split, file_names,
                 num_batch, seq_len, reuse_len, perm_size, mask_alpha,
-                mask_beta, use_bfloat16=False, num_predict=None):
+                mask_beta, use_bfloat16=False, num_predict=None, use_tpu=False):
     
     bsz_per_core = params["batch_size"]
     if num_hosts > 1:
@@ -244,7 +246,8 @@ def get_dataset(params, num_hosts, num_core_per_host, split, file_names,
       num_hosts=num_hosts,
       host_id=host_id,
       num_core_per_host=num_core_per_host,
-      bsz_per_core=bsz_per_core)
+      bsz_per_core=bsz_per_core,
+      use_tpu=use_tpu)
     
     return dataset
 
@@ -262,7 +265,8 @@ def get_input_fn(
     mask_alpha=None,
     mask_beta=None,
     use_bfloat16=False,
-    num_predict=None):
+    num_predict=None,
+    use_tpu=False):
     
     basename = format_filename("record-info", bsz_per_host, seq_len,
                                 bi_data, "json", mask_alpha=mask_alpha,
@@ -308,7 +312,8 @@ def get_input_fn(
                 mask_alpha=mask_alpha,
                 mask_beta=mask_beta,
                 use_bfloat16=use_bfloat16,
-                num_predict=num_predict)
+                num_predict=num_predict,
+                use_tpu=use_tpu)
         
         return dataset
     

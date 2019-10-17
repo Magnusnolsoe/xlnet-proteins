@@ -172,7 +172,7 @@ def get_model_fn():
 
     #### Configuring the optimizer
     train_op, learning_rate, gnorm = model_utils.get_train_op(
-        FLAGS, total_loss)
+        FLAGS, total_loss, None)
     monitor_dict["lr"] = learning_rate
     monitor_dict["gnorm"] = gnorm
 
@@ -224,7 +224,7 @@ def get_input_fn(split):
   batch_size = FLAGS.train_batch_size
 
   input_fn, record_info_dict = data_utils.get_input_fn(
-      tfrecord_dir=FLAGS.record_info_dir,
+      info_dir=FLAGS.record_info_dir,
       split=split,
       bsz_per_host=batch_size // FLAGS.num_hosts,
       seq_len=FLAGS.seq_len,
@@ -235,10 +235,9 @@ def get_input_fn(split):
       perm_size=FLAGS.perm_size,
       mask_alpha=FLAGS.mask_alpha,
       mask_beta=FLAGS.mask_beta,
-      uncased=FLAGS.uncased,
-      num_passes=FLAGS.num_passes,
       use_bfloat16=FLAGS.use_bfloat16,
-      num_predict=FLAGS.num_predict)
+      num_predict=FLAGS.num_predict,
+      use_tpu=FLAGS.use_tpu)
 
   return input_fn, record_info_dict
 

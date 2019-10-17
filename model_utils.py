@@ -104,7 +104,10 @@ def get_train_op(FLAGS, total_loss, num_train_batches, grads_and_vars=None):
     warmup_lr = 0.0
 
   # decay the learning rate
-  steps = num_train_batches * FLAGS.epochs
+  if not FLAGS.use_tpu:
+    steps = FLAGS.train_steps
+  else:
+    steps = num_train_batches * FLAGS.epochs
   if FLAGS.decay_method == "poly":
     decay_lr = tf.train.polynomial_decay(
         FLAGS.learning_rate,
