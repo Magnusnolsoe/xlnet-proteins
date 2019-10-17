@@ -342,9 +342,13 @@ def train(ps_device):
     v_fetches = [v_loss, v_tower_new_mems]
     
     # Create writers for Tensorboard logging
-    train_summary_writer, valid_summary_writer = tb.create_writers(sess, logging_dir=FLAGS.tb_logging_dir,
-                                                            id=FLAGS.run_id, n_layer=FLAGS.n_layer,
-                                                            d_model=FLAGS.d_model, n_heads=FLAGS.n_head)
+    info_dict = {
+          "id": FLAGS.run_id,
+          "n_layers": FLAGS.n_layer,
+          "d_model": FLAGS.d_model,
+          "n_heads": FLAGS.n_head
+    }
+    train_summary_writer, valid_summary_writer = tb.create_writers(sess, info=info_dict, logging_dir=FLAGS.tb_logging_dir)
     
     total_loss, prev_step = 0., -1
     for i in range(FLAGS.epochs):

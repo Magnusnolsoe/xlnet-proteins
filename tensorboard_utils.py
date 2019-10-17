@@ -54,7 +54,7 @@ def tensorboard_setup_test():
             
     return tf.summary.merge([tf_test_loss_summary, tf_test_acc_summary, tf_test_ppl_summary])
 
-def create_writers(sess, logTrain=True, logValid=True, logging_dir="logging", **kwargs):
+def create_writers(sess, info, logTrain=True, logValid=True, logging_dir="logging"):
     
         i = len(os.listdir(logging_dir)) + 1
         logging_dir_n = os.path.join(logging_dir, str(i))
@@ -65,7 +65,7 @@ def create_writers(sess, logTrain=True, logValid=True, logging_dir="logging", **
         os.mkdir(logging_dir)
         
         with tf.gfile.Open(os.path.join(logging_dir, "info.json"), "w") as fp:
-            json.dump(kwargs, fp)
+            json.dump(info, fp)
 
         total_train_log_dir = os.path.join(logging_dir, "train")
         total_valid_log_dir = os.path.join(logging_dir, "valid")
