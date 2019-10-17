@@ -48,7 +48,7 @@ flags.DEFINE_string("model_dir", default=None,
       help="Estimator model_dir.")
 flags.DEFINE_string("init_checkpoint", default=None,
       help="Checkpoint path for initializing the model.")
-flags.DEFINE_string("log_dir", default="logging",
+flags.DEFINE_string("logDir", default="logging",
       help="Path to logging directory.")
 
 # Optimization config
@@ -184,7 +184,7 @@ def get_model_fn():
     scaffold_fn = model_utils.init_from_checkpoint(FLAGS, global_vars=True)
 
     #### Creating host calls
-    _dir = get_logdir(FLAGS.log_dir)
+    _dir = get_logdir(FLAGS.logDir)
     host_call = function_builder.construct_scalar_host_call(
         monitor_dict=monitor_dict,
         log_dir=_dir,
