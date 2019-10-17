@@ -40,6 +40,8 @@ flags.DEFINE_bool("track_mean", default=False,
       help="Whether to track mean loss.")
 
 # Experiment (data/checkpoint/directory) config
+flags.DEFINE_string("run_id", default=None,
+      help="Id of current run.")
 flags.DEFINE_integer("num_passes", default=1,
       help="Number of passed used for training.")
 flags.DEFINE_string("record_info_dir", default=None,

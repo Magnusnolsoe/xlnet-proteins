@@ -84,9 +84,7 @@ def create_writers(sess, logTrain=True, logValid=True, logging_dir='logging', **
             
 def create_test_writer(sess, logging_dir='logging'):
 
-        i = len(os.listdir(logging_dir))
-        logging_dir = os.path.join(logging_dir, str(i))
-
+        logging_dir = get_logdir(logging_dir)
 
         total_test_log_dir = os.path.join(logging_dir, "test")
 
