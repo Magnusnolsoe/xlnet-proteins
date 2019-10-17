@@ -56,9 +56,9 @@ def tensorboard_setup_test():
             
     return tf.summary.merge([tf_test_loss_summary, tf_test_acc_summary, tf_test_ppl_summary])
 
-def create_writers(sess, logTrain=True, logValid=True, logging_dir='logging', **kwargs):
+def create_writers(sess, info, logTrain=True, logValid=True, logging_dir='logging'):
     
-        logging_dir = get_logdir(logging_dir, kwargs=kwargs)
+        logging_dir = get_logdir(logging_dir, info)
 
         total_train_log_dir = os.path.join(logging_dir, "train")
         total_valid_log_dir = os.path.join(logging_dir, "valid")

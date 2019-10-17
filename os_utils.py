@@ -2,7 +2,7 @@ import os
 import json
 import tensorflow as tf
 
-def get_logdir(_dir, **kwargs):
+def get_logdir(_dir, info):
 
     if not tf.gfile.Exists(_dir):
         tf.gfile.MakeDirs(_dir)
@@ -16,6 +16,6 @@ def get_logdir(_dir, **kwargs):
     tf.gfile.MakeDirs(logging_dir)
 
     with tf.gfile.Open(os.path.join(logging_dir, "info.json"), "w") as fp:
-        json.dump(kwargs, fp)
+        json.dump(info, fp)
 
     return logging_dir

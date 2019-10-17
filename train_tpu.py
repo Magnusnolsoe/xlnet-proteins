@@ -185,7 +185,13 @@ def get_model_fn():
     #### Customized initial checkpoint
     scaffold_fn = model_utils.init_from_checkpoint(FLAGS, global_vars=True)
     #### Creating host calls
-    _dir = get_logdir(FLAGS.logDir, id=FLAGS.run_id)
+    info_dict = {
+          "id": FLAGS.run_id, 
+          "n_layers": FLAGS.n_layers, 
+          "d_model": FLAGS.d_model, 
+          "n_heads": FLAGS.n_head
+    }
+    _dir = get_logdir(FLAGS.logDir, info_dict)
     host_call = function_builder.construct_scalar_host_call(
         monitor_dict=monitor_dict,
         log_dir=_dir,
