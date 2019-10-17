@@ -630,57 +630,59 @@ def create_data(_):
     if not tf.io.gfile.exists(test_save_path):
         tf.gfile.MakeDirs(test_save_path)
     
+    if FLAGS.make_train_set:
+        tf.logging.info("Processing training data \"{}\"".format(train_path))
+        record_info = _create_data(train_path)
+        record_name = format_filename(
+        prefix="record-info",
+        bsz_per_host=FLAGS.bsz_per_host,
+        seq_len=FLAGS.seq_len,
+        mask_alpha=FLAGS.mask_alpha,
+        mask_beta=FLAGS.mask_beta,
+        reuse_len=FLAGS.reuse_len,
+        bi_data=FLAGS.bi_data,
+        suffix="json",
+        fixed_num_predict=FLAGS.num_predict)
+        record_info_path = os.path.join(train_save_path, record_name)
+        
+        with tf.gfile.Open(record_info_path, "w") as fp:
+            json.dump(record_info, fp)
+    
+    if FLAGS.make_valid_set:
+        tf.logging.info("Processing validation data \"{}\"".format(valid_path))
+        record_info = _create_data(valid_path)
+        record_name = format_filename(
+        prefix="record-info",
+        bsz_per_host=FLAGS.bsz_per_host,
+        seq_len=FLAGS.seq_len,
+        mask_alpha=FLAGS.mask_alpha,
+        mask_beta=FLAGS.mask_beta,
+        reuse_len=FLAGS.reuse_len,
+        bi_data=FLAGS.bi_data,
+        suffix="json",
+        fixed_num_predict=FLAGS.num_predict)
+        record_info_path = os.path.join(valid_save_path, record_name)
+        
+        with tf.gfile.Open(record_info_path, "w") as fp:
+            json.dump(record_info, fp)
 
-    tf.logging.info("Processing training data \"{}\"".format(train_path))
-    record_info = _create_data(train_path)
-    record_name = format_filename(
-      prefix="record-info",
-      bsz_per_host=FLAGS.bsz_per_host,
-      seq_len=FLAGS.seq_len,
-      mask_alpha=FLAGS.mask_alpha,
-      mask_beta=FLAGS.mask_beta,
-      reuse_len=FLAGS.reuse_len,
-      bi_data=FLAGS.bi_data,
-      suffix="json",
-      fixed_num_predict=FLAGS.num_predict)
-    record_info_path = os.path.join(train_save_path, record_name)
+    if FLAGS.make_test_set:
+        tf.logging.info("Processing validation data \"{}\"".format(test_path))
+        record_info = _create_data(test_path)
+        record_name = format_filename(
+        prefix="record-info",
+        bsz_per_host=FLAGS.bsz_per_host,
+        seq_len=FLAGS.seq_len,
+        mask_alpha=FLAGS.mask_alpha,
+        mask_beta=FLAGS.mask_beta,
+        reuse_len=FLAGS.reuse_len,
+        bi_data=FLAGS.bi_data,
+        suffix="json",
+        fixed_num_predict=FLAGS.num_predict)
+        record_info_path = os.path.join(test_save_path, record_name)
     
-    with tf.gfile.Open(record_info_path, "w") as fp:
-        json.dump(record_info, fp)
-    
-    tf.logging.info("Processing validation data \"{}\"".format(valid_path))
-    record_info = _create_data(valid_path)
-    record_name = format_filename(
-      prefix="record-info",
-      bsz_per_host=FLAGS.bsz_per_host,
-      seq_len=FLAGS.seq_len,
-      mask_alpha=FLAGS.mask_alpha,
-      mask_beta=FLAGS.mask_beta,
-      reuse_len=FLAGS.reuse_len,
-      bi_data=FLAGS.bi_data,
-      suffix="json",
-      fixed_num_predict=FLAGS.num_predict)
-    record_info_path = os.path.join(valid_save_path, record_name)
-    
-    with tf.gfile.Open(record_info_path, "w") as fp:
-        json.dump(record_info, fp)
-
-    tf.logging.info("Processing validation data \"{}\"".format(test_path))
-    record_info = _create_data(test_path)
-    record_name = format_filename(
-      prefix="record-info",
-      bsz_per_host=FLAGS.bsz_per_host,
-      seq_len=FLAGS.seq_len,
-      mask_alpha=FLAGS.mask_alpha,
-      mask_beta=FLAGS.mask_beta,
-      reuse_len=FLAGS.reuse_len,
-      bi_data=FLAGS.bi_data,
-      suffix="json",
-      fixed_num_predict=FLAGS.num_predict)
-    record_info_path = os.path.join(test_save_path, record_name)
-    
-    with tf.gfile.Open(record_info_path, "w") as fp:
-        json.dump(record_info, fp)
+        with tf.gfile.Open(record_info_path, "w") as fp:
+            json.dump(record_info, fp)
 
 if __name__ == "__main__":
     flags = tf.app.flags
@@ -702,7 +704,15 @@ if __name__ == "__main__":
                       help="Directory with raw input data.")
     flags.DEFINE_bool("use_eop", True,
                     help="whether to append EOP at the end of a protein.")
+    flags.DEFINE_bool("make_train_set", False,
+                    help="whether to build the train dataset.")
+    flags.DEFINE_bool("make_valid_set", False,
+                    help="whether to build the valid dataset.")
+    flags.DEFINE_bool("make_test_set", False,
+                    help="whether to build the test dataset.")
     
+
+
     # Data config
     flags.DEFINE_integer("seq_len", 512,
                        help="Sequence length.")

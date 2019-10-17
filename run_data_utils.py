@@ -24,6 +24,7 @@ def main(_):
         use_tpu = params['use_tpu'] # whether or not to use tpu
         use_eop = params['use_eop'] # whether or not to use EOP token at the end of each protein
         batch_size_per_host = params['bsz_per_host'] # 
+        make_train/test/valid_set = params['-.-'] # Whether to build the specified datasets
         number_core_per_host = params['num_core_per_host']
         input_file = params['input_file'] # name of the input file (including file extension) 
         data_dir = params['data_dir'] # path of input data directory
@@ -37,7 +38,8 @@ def main(_):
         '''
         
         param_keys = ["use_tpu", "use_eop", "bsz_per_host", "train_filename",
-                      "valid_filename", "test_filename",
+                      "valid_filename", "test_filename", "make_train_set", 
+                      "make_valid_set", "make_test_set",
                       "data_dir", "save_dir", "seq_len", "reuse_len",
                       "bi_data", "num_predict", "mask_alpha", "mask_beta"]
         
