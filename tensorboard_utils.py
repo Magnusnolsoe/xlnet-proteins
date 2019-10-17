@@ -58,10 +58,7 @@ def tensorboard_setup_test():
 
 def create_writers(sess, logTrain=True, logValid=True, logging_dir='logging', **kwargs):
     
-        logging_dir = get_logdir(logging_dir)
-        
-        with tf.gfile.Open(os.path.join(logging_dir, "info.json"), "w") as fp:
-            json.dump(kwargs, fp)
+        logging_dir = get_logdir(logging_dir, kwargs=kwargs)
 
         total_train_log_dir = os.path.join(logging_dir, "train")
         total_valid_log_dir = os.path.join(logging_dir, "valid")
