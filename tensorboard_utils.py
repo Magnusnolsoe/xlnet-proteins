@@ -5,6 +5,8 @@ import os
 import math
 import json
 
+from os_utils import get_logdir
+
 tf_training_loss_ph = tf.placeholder(tf.float32,shape=None, name='training-loss')
 tf_training_pplx_ph = tf.placeholder(tf.float32,shape=None, name='training_ppl')
 
@@ -56,13 +58,7 @@ def tensorboard_setup_test():
 
 def create_writers(sess, logTrain=True, logValid=True, logging_dir='logging', **kwargs):
     
-        i = len(os.listdir(logging_dir)) + 1
-        logging_dir_n = os.path.join(logging_dir, str(i))
-        while os.path.exists(logging_dir_n):
-            i += 1
-            logging_dir_n = os.path.join(logging_dir, str(i))
-        logging_dir = logging_dir_n
-        os.mkdir(logging_dir)
+        logging_dir = get_logdir(logging_dir)
         
         with tf.gfile.Open(os.path.join(logging_dir, "info.json"), "w") as fp:
             json.dump(kwargs, fp)

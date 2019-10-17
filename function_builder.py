@@ -12,7 +12,7 @@ import xlnet
 
 def construct_scalar_host_call(
     monitor_dict,
-    model_dir,
+    log_dir,
     prefix="",
     reduce_fn=None):
   """
@@ -25,7 +25,7 @@ def construct_scalar_host_call(
     """actual host call function."""
     step = global_step[0]
     with tf.contrib.summary.create_file_writer(
-        logdir=model_dir, filename_suffix=".host_call").as_default():
+        logdir=log_dir, filename_suffix=".host_call").as_default():
       with tf.contrib.summary.always_record_summaries():
         for i, name in enumerate(metric_names):
           if reduce_fn is None:

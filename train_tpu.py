@@ -5,6 +5,7 @@ from __future__ import print_function
 
 import os
 
+from os_utils import get_logdir
 from absl import app
 from absl import flags
 import absl.logging as _logging  # pylint: disable=unused-import
@@ -47,6 +48,8 @@ flags.DEFINE_string("model_dir", default=None,
       help="Estimator model_dir.")
 flags.DEFINE_string("init_checkpoint", default=None,
       help="Checkpoint path for initializing the model.")
+flags.DEFINE_string("log_dir", default="logging",
+      help="Path to logging directory.")
 
 # Optimization config
 flags.DEFINE_float("learning_rate", default=1e-4,
@@ -181,9 +184,10 @@ def get_model_fn():
     scaffold_fn = model_utils.init_from_checkpoint(FLAGS, global_vars=True)
 
     #### Creating host calls
+    _dir = get_logdir(FLAGS.log_dir)
     host_call = function_builder.construct_scalar_host_call(
         monitor_dict=monitor_dict,
-        model_dir=FLAGS.model_dir,
+        log_dir=_dir,
         prefix="train/",
         reduce_fn=tf.reduce_mean)
 
