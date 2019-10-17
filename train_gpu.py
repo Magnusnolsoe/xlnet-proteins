@@ -344,9 +344,12 @@ def train(ps_device):
     # Create writers for Tensorboard logging
     info_dict = {
           "id": FLAGS.run_id,
-          "n_layers": FLAGS.n_layer,
+          "d_inner": FLAGS.d_inner,
           "d_model": FLAGS.d_model,
-          "n_heads": FLAGS.n_head
+          "ff_activation": FLAGS.ff_activation,
+          "n_heads": FLAGS.n_head,
+          "n_layers": FLAGS.n_layer,
+          "untie_r": FLAGS.untie_r
     }
     train_summary_writer, valid_summary_writer = tb.create_writers(sess, info=info_dict, logging_dir=FLAGS.tb_logging_dir)
     
