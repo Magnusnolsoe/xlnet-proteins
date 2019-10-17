@@ -130,7 +130,7 @@ flags.DEFINE_float("init_range", default=0.1,
       help="Initialization std when init is uniform.")
 
 # Logging config
-flags.DEFINE_string("tb_logging_dir", default="logging/1/",
+flags.DEFINE_string("tb_logging_dir", default="logging",
                     help="The directory to save the logs for Tensorboard.")
 
 
@@ -343,7 +343,8 @@ def train(ps_device):
     
     # Create writers for Tensorboard logging
     train_summary_writer, valid_summary_writer = tb.create_writers(sess, logging_dir=FLAGS.tb_logging_dir,
-                                                      id=FLAGS.run_id)
+                                                            id=FLAGS.run_id, n_layer=FLAGS.n_layer,
+                                                            d_model=FLAGS.d_model, n_heads=FLAGS.n_head)
     
     total_loss, prev_step = 0., -1
     for i in range(FLAGS.epochs):

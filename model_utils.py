@@ -104,7 +104,7 @@ def get_train_op(FLAGS, total_loss, num_train_batches, grads_and_vars=None):
     warmup_lr = 0.0
 
   # decay the learning rate
-  if not FLAGS.use_tpu:
+  if FLAGS.use_tpu:
     steps = FLAGS.train_steps
   else:
     steps = num_train_batches * FLAGS.epochs
