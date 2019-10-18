@@ -266,7 +266,8 @@ def get_input_fn(
     mask_beta=None,
     use_bfloat16=False,
     num_predict=None,
-    use_tpu=False):
+    use_tpu=False,
+	bucket_uri=None):
     
     basename = format_filename("record-info", bsz_per_host, seq_len,
                                 bi_data, "json", mask_alpha=mask_alpha,
@@ -286,7 +287,10 @@ def get_input_fn(
         info = json.load(fp)
         
         record_info["num_batch"] += info["num_batch"]
-        record_info["filenames"] += info["filenames"]
+		if bucket_uri is not None:
+			record_info["filenames"] += os.path.join(butcket_uri, info["filenames"])
+		else:
+			record_info["filenames"] += info["filenames"]
 
     tf.logging.info("Total number of batches: %d",
                     record_info["num_batch"])

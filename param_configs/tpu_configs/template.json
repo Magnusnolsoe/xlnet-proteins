@@ -14,6 +14,7 @@
 	"model_dir": "",
 	"init_checkpoint": "",
 	"logDir": "",
+	"bucket_uri": "",
 	"learning_rate": 0.0,
 	"clip": 0.0,
 	"min_lr_ratio": 0.0,

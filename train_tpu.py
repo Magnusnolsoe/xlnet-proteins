@@ -52,6 +52,8 @@ flags.DEFINE_string("init_checkpoint", default=None,
       help="Checkpoint path for initializing the model.")
 flags.DEFINE_string("logDir", default="logging",
       help="Path to logging directory.")
+flags.DEFINE_string("bucket_uri", default=None,
+      help="URI of gcp bucket.")
 
 # Optimization config
 flags.DEFINE_float("learning_rate", default=1e-4,
@@ -249,7 +251,8 @@ def get_input_fn(split):
       mask_beta=FLAGS.mask_beta,
       use_bfloat16=FLAGS.use_bfloat16,
       num_predict=FLAGS.num_predict,
-      use_tpu=FLAGS.use_tpu)
+      use_tpu=FLAGS.use_tpu,
+	  bucket_uri=FLAGS.bucket_uri)
 
   return input_fn, record_info_dict
 
