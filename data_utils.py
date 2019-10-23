@@ -21,19 +21,15 @@ LOOKUP_TABLE = {'M': 0, 'R': 1, 'W': 2, 'L': 3, 'D': 4,
                 'I': 15, 'N': 16, 'C': 17, 'Y': 18, 'Q': 19,
                 'X': 20, 'B': 21, 'U': 22, 'Z': 23}
 special_symbols = {
-    "<cls>"  : 24,
-    "<sep>"  : 25,
-    "<eop>"  : 26,
+    "<eop>"  : 24,
 }
 
 VOCAB_SIZE = len(LOOKUP_TABLE) + len(special_symbols)
 EOP_ID = special_symbols["<eop>"]
-CLS_ID = special_symbols["<cls>"]
-SEP_ID = special_symbols["<sep>"]
 
 
 def parse_files_to_dataset(parser, file_names, split, num_batch, num_hosts,
-                           host_id, num_core_per_host, bsz_per_core, use_tpu=False):
+                           host_id, num_core_per_host, bsz_per_core):
     
     
     #assert split == "train"
@@ -49,7 +45,7 @@ def parse_files_to_dataset(parser, file_names, split, num_batch, num_hosts,
     # is not helpful. It will use a lot of memory and lead to contrainer OOM.
     # So, change to cache non-parsed raw data instead.
     dataset = dataset.cache().map(parser)
-    if use_tpu:
+    if split == "train":
         dataset = dataset.repeat()
     dataset = dataset.batch(bsz_per_core, drop_remainder=True)
     dataset = dataset.prefetch(num_core_per_host * bsz_per_core)
@@ -89,13 +85,8 @@ def _local_perm(inputs, targets, is_masked, perm_size, seq_len):
     index = tf.random_shuffle(index)
     index = tf.reshape(tf.transpose(index), [-1])
     
-    # `perm_mask` and `target_mask`
-    # non-functional tokens
-    non_func_tokens = tf.logical_not(tf.logical_or(
-            tf.equal(inputs, SEP_ID),
-            tf.equal(inputs, CLS_ID)))
     
-    non_mask_tokens = tf.logical_and(tf.logical_not(is_masked), non_func_tokens)
+    non_mask_tokens = tf.logical_not(is_masked)
     masked_or_func_tokens = tf.logical_not(non_mask_tokens)
     
     # Set the permutation indices of non-masked (& non-funcional) tokens to the
@@ -137,7 +128,7 @@ def _local_perm(inputs, targets, is_masked, perm_size, seq_len):
 
 def get_dataset(params, num_hosts, num_core_per_host, split, file_names,
                 num_batch, seq_len, reuse_len, perm_size, mask_alpha,
-                mask_beta, use_bfloat16=False, num_predict=None, use_tpu=False):
+                mask_beta, use_bfloat16=False, num_predict=None):
     
     bsz_per_core = params["batch_size"]
     if num_hosts > 1:
@@ -202,6 +193,8 @@ def get_dataset(params, num_hosts, num_core_per_host, split, file_names,
             ##### extra padding due to CLS/SEP introduced after prepro
             actual_num_predict = tf.shape(indices)[0]
             pad_len = num_predict - actual_num_predict
+
+            assert pad_len == 0
     
             ##### target_mapping
             target_mapping = tf.one_hot(indices, seq_len, dtype=tf.float32)
@@ -246,8 +239,7 @@ def get_dataset(params, num_hosts, num_core_per_host, split, file_names,
       num_hosts=num_hosts,
       host_id=host_id,
       num_core_per_host=num_core_per_host,
-      bsz_per_core=bsz_per_core,
-      use_tpu=use_tpu)
+      bsz_per_core=bsz_per_core)
     
     return dataset
 
@@ -265,8 +257,7 @@ def get_input_fn(
     mask_alpha=None,
     mask_beta=None,
     use_bfloat16=False,
-    num_predict=None,
-    use_tpu=False):
+    num_predict=None):
     
     basename = format_filename("record-info", bsz_per_host, seq_len,
                                 bi_data, "json", mask_alpha=mask_alpha,
@@ -312,8 +303,7 @@ def get_input_fn(
                 mask_alpha=mask_alpha,
                 mask_beta=mask_beta,
                 use_bfloat16=use_bfloat16,
-                num_predict=num_predict,
-                use_tpu=use_tpu)
+                num_predict=num_predict)
         
         return dataset
     
@@ -465,12 +455,10 @@ def create_tfrecords(save_dir, basename, data, bsz_per_host, seq_len,
     reuse_len = FLAGS.reuse_len
     
     # [sep] x 2 + [cls]
-    assert reuse_len < seq_len - 3
+    assert reuse_len < seq_len
     
     
     data_len = data.shape[1]
-    sep_array = np.array([SEP_ID], dtype=np.int64)
-    cls_array = np.array([CLS_ID], dtype=np.int64)
     
     with tf.python_io.TFRecordWriter(save_path) as record_writer:
         i = 0
@@ -481,53 +469,25 @@ def create_tfrecords(save_dir, basename, data, bsz_per_host, seq_len,
             all_ok = True
             features = []
             for idx in range(bsz_per_host):
-                inp = data[idx, i: i+reuse_len]
-                tgt = data[idx, i+1: i+reuse_len+1]
-                
-                results = _split_a_and_b(
-                        data[idx],
-                        prot_ids[idx],
-                        begin_idx=i + reuse_len,
-                        tot_len=seq_len - reuse_len - 3,
-                        extend_target=True)
-                if results is None:
-                    tf.logging.info("Break out with seq idx {}".format(i))
-                    all_ok = False
-                    break
-                
-                #unpack the results
-                (a_data, b_data, label, _, a_target, b_target) = tuple(results)
+                inp = data[idx, i: i+seq_len]
+                tgt = data[idx, i+1: i+seq_len+1]
                 
                 # sample ngram spans to predict
                 reverse = bi_data and (idx // (bsz_per_core // 2)) % 2 == 1
-                if FLAGS.num_predict is None:
-                    num_predict_0 = num_predict_1 = None
-                else:
-                    num_predict_1 = FLAGS.num_predict // 2
-                    num_predict_0 = FLAGS.num_predict - num_predict_1
                 mask_0 = _sample_mask(inp, FLAGS.mask_alpha, FLAGS.mask_beta,
-                                      reverse=reverse, goal_num_predict=num_predict_0)
-                mask_1 = _sample_mask(np.concatenate([a_data, sep_array, b_data,
-                                                      sep_array, cls_array]),
-                                FLAGS.mask_alpha, FLAGS.mask_beta,
-                                reverse=reverse, goal_num_predict=num_predict_1)
+                                      reverse=reverse, goal_num_predict=FLAGS.num_predict)
                 
                 # Concatenate data
-                cat_data = np.concatenate([inp, a_data, sep_array, b_data, 
-                                           sep_array, cls_array])
-                seg_id = ([0] * (reuse_len + a_data.shape[0]) + [0] + 
-                          [1] * b_data.shape[0] + [1] + [2])
+                seg_id = [0] * seq_len
                 
-                # the last two CLS's are not used, just for padding purposes
-                tgt = np.concatenate([tgt, a_target, b_target, cls_array, cls_array])
-                assert tgt.shape[0] == seq_len
                 
-                is_masked = np.concatenate([mask_0, mask_1], 0)
+                is_masked = mask_0
                 if FLAGS.num_predict is not None:
                     assert np.sum(is_masked) == FLAGS.num_predict
                 
+                label = 1
                 feature = {
-                  "input": _int64_feature(cat_data),
+                  "input": _int64_feature(inp),
                   "is_masked": _int64_feature(is_masked),
                   "target": _int64_feature(tgt),
                   "seg_id": _int64_feature(seg_id),
@@ -668,7 +628,7 @@ def create_data(_):
     with tf.gfile.Open(record_info_path, "w") as fp:
         json.dump(record_info, fp)
 
-    tf.logging.info("Processing test data \"{}\"".format(test_path))
+    tf.logging.info("Processing validation data \"{}\"".format(test_path))
     record_info = _create_data(test_path)
     record_name = format_filename(
       prefix="record-info",
