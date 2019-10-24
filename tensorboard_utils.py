@@ -14,7 +14,6 @@ tf_valid_loss_ph = tf.placeholder(tf.float32,shape=None, name='validation-loss')
 tf_valid_pplx_ph = tf.placeholder(tf.float32,shape=None, name='validation_ppl')
 
 tf_test_loss_ph = tf.placeholder(tf.float32,shape=None, name='test-loss')
-tf_test_acc_ph = tf.placeholder(tf.float32,shape=None, name='test-accuracy')
 tf_test_pplx_ph = tf.placeholder(tf.float32,shape=None, name='test_ppl')
 
 def tensorboard_setup(logTrain=True, logValid=True):
@@ -51,10 +50,9 @@ def tensorboard_setup(logTrain=True, logValid=True):
 def tensorboard_setup_test():
     with tf.name_scope('test'):
         tf_test_loss_summary = tf.summary.scalar('test_loss', tf_test_loss_ph)
-        tf_test_acc_summary = tf.summary.scalar('test_acc', tf_test_acc_ph)
         tf_test_ppl_summary = tf.summary.scalar('test_pplx', tf_test_pplx_ph)
             
-    return tf.summary.merge([tf_test_loss_summary, tf_test_acc_summary, tf_test_ppl_summary])
+    return tf.summary.merge([tf_test_loss_summary, tf_test_ppl_summary])
 
 def create_writers(sess, info, logTrain=True, logValid=True, logging_dir='logging'):
     
@@ -99,7 +97,6 @@ def run_valid(sess, valid_performance_summaries, val_loss, v_pplx):
     return sess.run(valid_performance_summaries, feed_dict={tf_valid_loss_ph:val_loss,
                                                             tf_valid_pplx_ph:v_pplx})    
 
-def run_test(sess, test_performance_summaries, test_loss, test_acc, t_pplx):
+def run_test(sess, test_performance_summaries, test_loss, t_pplx):
     return sess.run(test_performance_summaries, feed_dict={tf_test_loss_ph:test_loss, 
-                                                           tf_test_acc_ph:test_acc,
                                                            tf_test_pplx_ph:t_pplx})

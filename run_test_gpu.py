@@ -19,7 +19,7 @@ def main(_):
         params = json.load(config_file)
         
         # train_batch_size should be equal to the bsz_per_host used in preprocessing
-        param_keys = ["record_info_dir", "num_core_per_host", "train_batch_size",
+        param_keys = ["record_info_dir", "num_core_per_host", "test_batch_size",
                       "seq_len", "reuse_len", "bi_data", "mask_alpha", "mask_beta",
                       "num_predict", "perm_size", "n_token",
                       "init_checkpoint", "use_tpu", "mem_len", "n_layer",

@@ -274,7 +274,11 @@ def get_input_fn(
                                 mask_beta=mask_beta, reuse_len=reuse_len,
                                 fixed_num_predict=num_predict)
 
-    record_info_path = os.path.join(info_dir, basename)
+    if bucket_uri is not None:
+        record_info_path = os.path.join(os.path.join(bucket_uri, info_dir), basename)
+    else:
+        record_info_path = os.path.join(info_dir, basename)
+    print(record_info_path)
 
     assert tf.io.gfile.exists(record_info_path)
 
@@ -287,10 +291,10 @@ def get_input_fn(
         info = json.load(fp)
         
         record_info["num_batch"] += info["num_batch"]
-		if bucket_uri is not None:
-			record_info["filenames"] += os.path.join(butcket_uri, info["filenames"])
-		else:
-			record_info["filenames"] += info["filenames"]
+        if bucket_uri is not None:
+            record_info["filenames"] = [os.path.join(bucket_uri, f) for f in info["filenames"]]
+        else:
+            record_info["filenames"] = info["filenames"]
 
     tf.logging.info("Total number of batches: %d",
                     record_info["num_batch"])

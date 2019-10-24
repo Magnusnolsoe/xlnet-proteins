@@ -4,11 +4,21 @@ from __future__ import division
 from __future__ import print_function
 
 import functools
-import os
+import os, sys
 import tensorflow as tf
 import modeling
 import xlnet
 
+def construct_scalar_metric_fn(
+  batch_loss,
+  batch_tgt_mask):
+  """
+  Construct metric function to be evaluated during validation on TPUs.
+  """
+  def metric_fn(loss, mask):
+    return {'avg_loss': tf.compat.v1.metrics.mean(loss, weights=mask)}
+
+  return metric_fn, [batch_loss, batch_tgt_mask]
 
 def construct_scalar_host_call(
     monitor_dict,
@@ -20,7 +30,7 @@ def construct_scalar_host_call(
   """
 
   metric_names = list(monitor_dict.keys())
-
+  
   def host_call_fn(global_step, *args):
     """actual host call function."""
     step = global_step[0]
@@ -33,8 +43,9 @@ def construct_scalar_host_call(
           else:
             scalar = reduce_fn(args[i])
           with tf.contrib.summary.record_summaries_every_n_global_steps(
-              100, global_step=step):
-            tf.contrib.summary.scalar(prefix + name, scalar, step=step)
+                100, global_step=step):
+              tf.contrib.summary.scalar(prefix + name, scalar, step=step)
+            
 
         return tf.contrib.summary.all_summary_ops()
 
@@ -115,12 +126,16 @@ def two_stream_loss(FLAGS, features, labels, mems, is_training):
     tgt_mask = tf.cast(tgt_mask, tf.float32)
     lm_loss = tf.cast(lm_loss, tf.float32)
 
-  tgt_sum = tf.reduce_sum(tgt_mask)
-  total_loss = tf.reduce_sum(lm_loss * tgt_mask) / tgt_sum
+  total_loss = tf.reduce_sum(lm_loss * tgt_mask) / tf.reduce_sum(tgt_mask)
 
-  monitor_dict["total_loss"] = total_loss
+  if is_training:
+    monitor_dict["total_loss"] = total_loss
 
-  return total_loss, new_mems, monitor_dict
+    return total_loss, new_mems, monitor_dict
+  elif FLAGS.use_tpu:
+    return total_loss, lm_loss, tgt_mask, new_mems
+  else:
+    return total_loss, new_mems
 
 
 def get_loss(FLAGS, features, labels, mems, is_training):
