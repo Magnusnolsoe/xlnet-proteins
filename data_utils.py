@@ -87,7 +87,6 @@ def _local_perm(inputs, targets, is_masked, perm_size, seq_len):
     
     
     non_mask_tokens = tf.logical_not(is_masked)
-    masked_or_func_tokens = tf.logical_not(non_mask_tokens)
     
     # Set the permutation indices of non-masked (& non-funcional) tokens to the
     # smallest index (-1):
@@ -99,18 +98,18 @@ def _local_perm(inputs, targets, is_masked, perm_size, seq_len):
     # Create `target_mask`: non-funcional and maksed tokens
     # 1: use mask as input and have loss
     # 0: use token (or [SEP], [CLS]) as input and do not have loss
-    target_tokens = tf.logical_and(masked_or_func_tokens, non_func_tokens)
-    target_mask = tf.cast(target_tokens, tf.float32)
+    target_mask = tf.cast(is_masked, tf.float32)
+    print(target_mask.shape.as_list())
 
     # Create `perm_mask`
     # `target_tokens` cannot see themselves
-    self_rev_index = tf.where(target_tokens, rev_index, rev_index + 1)
+    self_rev_index = tf.where(is_masked, rev_index, rev_index + 1)
 
     # 1: cannot attend if i <= j and j is not non-masked (masked_or_func_tokens)
     # 0: can attend if i > j or j is non-masked
     perm_mask = tf.logical_and(
             self_rev_index[:, None] <= rev_index[None, :],
-            masked_or_func_tokens)
+            is_masked)
     perm_mask = tf.cast(perm_mask, tf.float32)
 
     # new target: [next token] for LM and [curr token] (self) for PLM
@@ -189,31 +188,20 @@ def get_dataset(params, num_hosts, num_core_per_host, split, file_names,
             indices = tf.range(seq_len, dtype=tf.int64)
             bool_target_mask = tf.cast(target_mask, tf.bool)
             indices = tf.boolean_mask(indices, bool_target_mask)
-
-            ##### extra padding due to CLS/SEP introduced after prepro
+        
             actual_num_predict = tf.shape(indices)[0]
-            pad_len = num_predict - actual_num_predict
 
-            assert pad_len == 0
-    
             ##### target_mapping
             target_mapping = tf.one_hot(indices, seq_len, dtype=tf.float32)
-            paddings = tf.zeros([pad_len, seq_len], dtype=target_mapping.dtype)
-            target_mapping = tf.concat([target_mapping, paddings], axis=0)
             example["target_mapping"] = tf.reshape(target_mapping,
                                                  [num_predict, seq_len])
     
             ##### target
             target = tf.boolean_mask(target, bool_target_mask)
-            paddings = tf.zeros([pad_len], dtype=target.dtype)
-            target = tf.concat([target, paddings], axis=0)
             example["target"] = tf.reshape(target, [num_predict])
     
             ##### target mask
-            target_mask = tf.concat(
-                    [tf.ones([actual_num_predict], dtype=tf.float32),
-                     tf.zeros([pad_len], dtype=tf.float32)],
-                     axis=0)
+            target_mask = tf.ones([actual_num_predict], dtype=tf.float32)
             example["target_mask"] = tf.reshape(target_mask, [num_predict])
         else:
           example["target"] = tf.reshape(target, [seq_len])

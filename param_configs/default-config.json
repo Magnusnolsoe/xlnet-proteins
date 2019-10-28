@@ -33,7 +33,7 @@
 	"decay_method": "poly",
 	"weight_decay": 0.0,
 	"epochs": 5,
-	"log_steps": 100,
+	"log_steps": 5,
 	"save_steps": null,
 	"perm_size": 64,
 	"n_token": 27,

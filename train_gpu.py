@@ -369,6 +369,7 @@ def train(ps_device):
                       fetched = sess.run(fetches, feed_dict=feed_dict)
                       loss_np, tower_mems_np, curr_step = fetched[:3]
                       total_loss += loss_np
+                      print(curr_step)
 
                       # Log training progress
                       if curr_step > 0 and curr_step % FLAGS.log_steps == 0:
