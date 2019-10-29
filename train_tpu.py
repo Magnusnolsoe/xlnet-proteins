@@ -335,14 +335,28 @@ def main(unused_argv):
       eval_on_tpu=FLAGS.use_tpu)
 
   #### Training and Validation
+  last_err, c = 0, 0
   for i in range(FLAGS.epochs):
       tf.logging.info("#### Starting training cycle")
-      estimator.train(input_fn=train_input_fn, steps=train_steps)
+      train_ret = estimator.train(input_fn=train_input_fn, steps=train_steps)
 
       tf.logging.info("#### Starting evaluation/validation cycle")
-      eva_ret = estimator.evaluate(input_fn=valid_input_fn, steps=valid_steps)
+      eval_ret = estimator.evaluate(input_fn=valid_input_fn, steps=valid_steps)
 
+      '''
+      if eval_ret["metric_loss"] >= last_err: # TODO: Should be rounded!
+            c += 1
+            if c >= 5:
+                  break
+      else:
+            c = 0
+      last_err = eval_ret["metric_loss"]
+      '''
+      
       tf.logging.info("################## EPOCH {} ##################".format(i))
+
+  with open(os.path.join(FLAGS.model_dir, "results.json"), 'w') as f:
+        json.dump(eval_ret, f)
 
 
 if __name__ == "__main__":
