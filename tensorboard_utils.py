@@ -5,6 +5,8 @@ import os
 import math
 import json
 
+from os_utils import get_logdir
+
 tf_training_loss_ph = tf.placeholder(tf.float32,shape=None, name='training-loss')
 tf_training_pplx_ph = tf.placeholder(tf.float32,shape=None, name='training_ppl')
 
@@ -12,7 +14,6 @@ tf_valid_loss_ph = tf.placeholder(tf.float32,shape=None, name='validation-loss')
 tf_valid_pplx_ph = tf.placeholder(tf.float32,shape=None, name='validation_ppl')
 
 tf_test_loss_ph = tf.placeholder(tf.float32,shape=None, name='test-loss')
-tf_test_acc_ph = tf.placeholder(tf.float32,shape=None, name='test-accuracy')
 tf_test_pplx_ph = tf.placeholder(tf.float32,shape=None, name='test_ppl')
 
 def tensorboard_setup(logTrain=True, logValid=True):
@@ -49,23 +50,13 @@ def tensorboard_setup(logTrain=True, logValid=True):
 def tensorboard_setup_test():
     with tf.name_scope('test'):
         tf_test_loss_summary = tf.summary.scalar('test_loss', tf_test_loss_ph)
-        tf_test_acc_summary = tf.summary.scalar('test_acc', tf_test_acc_ph)
         tf_test_ppl_summary = tf.summary.scalar('test_pplx', tf_test_pplx_ph)
             
-    return tf.summary.merge([tf_test_loss_summary, tf_test_acc_summary, tf_test_ppl_summary])
+    return tf.summary.merge([tf_test_loss_summary, tf_test_ppl_summary])
 
-def create_writers(sess, info, logTrain=True, logValid=True, logging_dir="logging"):
+def create_writers(sess, info, logTrain=True, logValid=True, logging_dir='logging'):
     
-        i = len(os.listdir(logging_dir)) + 1
-        logging_dir_n = os.path.join(logging_dir, str(i))
-        while os.path.exists(logging_dir_n):
-            i += 1
-            logging_dir_n = os.path.join(logging_dir, str(i))
-        logging_dir = logging_dir_n
-        os.mkdir(logging_dir)
-        
-        with tf.gfile.Open(os.path.join(logging_dir, "info.json"), "w") as fp:
-            json.dump(info, fp)
+        logging_dir = get_logdir(logging_dir, info)
 
         total_train_log_dir = os.path.join(logging_dir, "train")
         total_valid_log_dir = os.path.join(logging_dir, "valid")
@@ -88,9 +79,8 @@ def create_writers(sess, info, logTrain=True, logValid=True, logging_dir="loggin
             
 def create_test_writer(sess, logging_dir='logging'):
 
-        i = len(os.listdir(logging_dir))
-        logging_dir = os.path.join(logging_dir, str(i))
-
+        info_dict = {"testing: ": True}
+        logging_dir = get_logdir(logging_dir, info_dict)
 
         total_test_log_dir = os.path.join(logging_dir, "test")
 
@@ -107,7 +97,6 @@ def run_valid(sess, valid_performance_summaries, val_loss, v_pplx):
     return sess.run(valid_performance_summaries, feed_dict={tf_valid_loss_ph:val_loss,
                                                             tf_valid_pplx_ph:v_pplx})    
 
-def run_test(sess, test_performance_summaries, test_loss, test_acc, t_pplx):
+def run_test(sess, test_performance_summaries, test_loss, t_pplx):
     return sess.run(test_performance_summaries, feed_dict={tf_test_loss_ph:test_loss, 
-                                                           tf_test_acc_ph:test_acc,
                                                            tf_test_pplx_ph:t_pplx})

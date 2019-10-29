@@ -105,7 +105,7 @@ def get_train_op(FLAGS, total_loss, num_train_batches, grads_and_vars=None):
 
   # decay the learning rate
   if FLAGS.use_tpu:
-    steps = FLAGS.train_steps
+    steps = FLAGS.train_steps*FLAGS.epochs
   else:
     steps = num_train_batches * FLAGS.epochs
   if FLAGS.decay_method == "poly":

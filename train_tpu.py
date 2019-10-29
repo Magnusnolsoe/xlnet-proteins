@@ -5,6 +5,7 @@ from __future__ import print_function
 
 import os
 
+from os_utils import get_logdir
 from absl import app
 from absl import flags
 import absl.logging as _logging  # pylint: disable=unused-import
@@ -39,14 +40,24 @@ flags.DEFINE_bool("track_mean", default=False,
       help="Whether to track mean loss.")
 
 # Experiment (data/checkpoint/directory) config
+flags.DEFINE_string("run_id", default=None,
+      help="Id of current run.")
 flags.DEFINE_integer("num_passes", default=1,
       help="Number of passed used for training.")
-flags.DEFINE_string("record_info_dir", default=None,
-      help="Path to local directory containing `record_info-lm.json`.")
+flags.DEFINE_string("train_record_info_dir", default=None,
+      help="Path to local directory containing training `record_info-lm.json`.")
+flags.DEFINE_string("valid_record_info_dir", default=None,
+      help="Path to local directory containing validation `record_info-lm.json`.")
 flags.DEFINE_string("model_dir", default=None,
       help="Estimator model_dir.")
 flags.DEFINE_string("init_checkpoint", default=None,
       help="Checkpoint path for initializing the model.")
+flags.DEFINE_string("logDir", default="logging",
+      help="Path to logging directory.")
+flags.DEFINE_string("bucket_uri", default=None,
+      help="URI of gcp bucket.")
+flags.DEFINE_integer("epochs", default=1,
+      help="Number of epochs to run.")
 
 # Optimization config
 flags.DEFINE_float("learning_rate", default=1e-4,
@@ -77,6 +88,10 @@ flags.DEFINE_integer("save_steps", default=None,
       "None for not saving checkpoints")
 flags.DEFINE_integer("max_save", default=100000,
       help="Maximum number of checkpoints to save.")
+
+# Validation config
+flags.DEFINE_integer("valid_batch_size", default=16,
+      help="Size of the train batch across all hosts.")
 
 # Data config
 flags.DEFINE_integer("seq_len", default=0,
@@ -143,13 +158,14 @@ flags.DEFINE_float("init_range", default=0.1,
 FLAGS = flags.FLAGS
 
 
-def get_model_fn():
+def get_model_fn(logdir):
   """doc."""
   def model_fn(features, labels, mode, params):
     """doc."""
     #### Training or Evaluation
     is_training = (mode == tf.estimator.ModeKeys.TRAIN)
-    assert is_training
+    #assert is_training
+    assert tf.gfile.Exists(logdir)
 
     #### Retrieve `mems` from `params["cache"]`
     mems = {}
@@ -158,42 +174,57 @@ def get_model_fn():
       mems["mems"] = params["cache"]
 
     #### Get loss from inputs
-    total_loss, new_mems, monitor_dict = function_builder.get_loss(
-        FLAGS, features, labels, mems, is_training)
+    if is_training:
+      total_loss, new_mems, monitor_dict = function_builder.get_loss(
+            FLAGS, features, labels, mems, is_training)
+    else:
+      total_loss, batch_loss, batch_tgt_mask, new_mems = function_builder.get_loss(
+            FLAGS, features, labels, mems, is_training)
 
     #### Turn `new_mems` into `new_cache`
     new_cache = []
     if FLAGS.mem_len > 0:
       new_cache += new_mems["mems"]
-
     #### Check model parameters
     num_params = sum([np.prod(v.shape) for v in tf.trainable_variables()])
     tf.logging.info("#params: {}".format(num_params))
 
-    #### Configuring the optimizer
-    train_op, learning_rate, gnorm = model_utils.get_train_op(
-        FLAGS, total_loss, None)
-    monitor_dict["lr"] = learning_rate
-    monitor_dict["gnorm"] = gnorm
-
     #### Customized initial checkpoint
     scaffold_fn = model_utils.init_from_checkpoint(FLAGS, global_vars=True)
 
-    #### Creating host calls
-    host_call = function_builder.construct_scalar_host_call(
-        monitor_dict=monitor_dict,
-        model_dir=FLAGS.model_dir,
-        prefix="train/",
-        reduce_fn=tf.reduce_mean)
+    if is_training:
+      #### Configuring the optimizer
+      train_op, learning_rate, gnorm = model_utils.get_train_op(
+            FLAGS, total_loss, None)
+      monitor_dict["gnorm"] = gnorm
+      monitor_dict["lr"] = learning_rate
+      monitor_dict['pplx'] = tf.math.exp(total_loss)
+      
+      #### Creating host calls
+      host_call = function_builder.construct_scalar_host_call(
+            monitor_dict=monitor_dict,
+            log_dir=logdir,
+            prefix="train/",
+            reduce_fn=tf.reduce_mean)
 
-    #### Constucting training TPUEstimatorSpec with new cache.
-    train_spec = tf.contrib.tpu.TPUEstimatorSpec(
-        mode=mode, loss=total_loss, train_op=train_op, host_call=host_call,
-        scaffold_fn=scaffold_fn)
+      #### Constucting training TPUEstimatorSpec with new cache.
+      train_spec = tf.contrib.tpu.TPUEstimatorSpec(
+            mode=mode, loss=total_loss, train_op=train_op, host_call=host_call,
+            scaffold_fn=scaffold_fn)
+      train_spec.cache = new_cache
 
-    train_spec.cache = new_cache
+      return train_spec
 
-    return train_spec
+    else:
+      #### Constucting validation TPUEstimatorSpec with new cache.
+      eval_metrics = function_builder.construct_scalar_metric_fn(batch_loss, batch_tgt_mask)
+
+      eval_spec = tf.contrib.tpu.TPUEstimatorSpec(
+            mode=mode, loss=total_loss, eval_metrics=eval_metrics, 
+            scaffold_fn=scaffold_fn)
+      eval_spec.cache = new_cache
+
+      return eval_spec
 
   return model_fn
 
@@ -220,11 +251,16 @@ def get_cache_fn(mem_len):
 
 def get_input_fn(split):
   """doc."""
-  assert split == "train"
-  batch_size = FLAGS.train_batch_size
+  assert split == "train" or split == "valid"
+  if split == 'train':
+      batch_size = FLAGS.train_batch_size
+      record_info_dir = FLAGS.train_record_info_dir
+  else:
+      batch_size = FLAGS.valid_batch_size
+      record_info_dir = FLAGS.valid_record_info_dir
 
   input_fn, record_info_dict = data_utils.get_input_fn(
-      info_dir=FLAGS.record_info_dir,
+      info_dir=record_info_dir,
       split=split,
       bsz_per_host=batch_size // FLAGS.num_hosts,
       seq_len=FLAGS.seq_len,
@@ -237,7 +273,8 @@ def get_input_fn(split):
       mask_beta=FLAGS.mask_beta,
       use_bfloat16=FLAGS.use_bfloat16,
       num_predict=FLAGS.num_predict,
-      use_tpu=FLAGS.use_tpu)
+      use_tpu=FLAGS.use_tpu,
+	bucket_uri=FLAGS.bucket_uri)
 
   return input_fn, record_info_dict
 
@@ -258,15 +295,28 @@ def main(unused_argv):
 
   # Get train input function
   train_input_fn, train_record_info_dict = get_input_fn("train")
+  valid_input_fn, valid_record_info_dict = get_input_fn("valid")
+
+  train_steps = train_record_info_dict["num_batch"]
+  valid_steps = valid_record_info_dict["num_batch"]
+  FLAGS.train_steps = train_steps
 
   tf.logging.info("num of batches {}".format(
       train_record_info_dict["num_batch"]))
 
   # Get train cache function
   train_cache_fn = get_cache_fn(FLAGS.mem_len)
+  eval_cache_fn = get_cache_fn(FLAGS.mem_len)
 
   ##### Get model function
-  model_fn = get_model_fn()
+  info_dict = {
+          "id": FLAGS.run_id, 
+          "n_layers": FLAGS.n_layer, 
+          "d_model": FLAGS.d_model, 
+          "n_heads": FLAGS.n_head
+  }
+  _dir = get_logdir(FLAGS.logDir, info_dict)
+  model_fn = get_model_fn(_dir)
 
   ##### Create TPUEstimator
   # TPU Configuration
@@ -276,14 +326,23 @@ def main(unused_argv):
   estimator = tpu_estimator.TPUEstimator(
       model_fn=model_fn,
       train_cache_fn=train_cache_fn,
+      eval_cache_fn=eval_cache_fn,
       use_tpu=FLAGS.use_tpu,
       config=run_config,
       params={"track_mean": FLAGS.track_mean},
       train_batch_size=FLAGS.train_batch_size,
+      eval_batch_size=FLAGS.valid_batch_size,
       eval_on_tpu=FLAGS.use_tpu)
 
-  #### Training
-  estimator.train(input_fn=train_input_fn, max_steps=FLAGS.train_steps)
+  #### Training and Validation
+  for i in range(FLAGS.epochs):
+      tf.logging.info("#### Starting training cycle")
+      estimator.train(input_fn=train_input_fn, steps=train_steps)
+
+      tf.logging.info("#### Starting evaluation/validation cycle")
+      eva_ret = estimator.evaluate(input_fn=valid_input_fn, steps=valid_steps)
+
+      tf.logging.info("################## EPOCH {} ##################".format(i))
 
 
 if __name__ == "__main__":
