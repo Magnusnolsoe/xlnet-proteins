@@ -18,7 +18,7 @@ def main(_):
                         "run_id", "num_passes", "record_info_dir", "model_dir",
                         "init_checkpoint", "logDir", "learning_rate", "clip",
                         "min_lr_ratio", "warmup_steps", "adam_epsilon",
-                        "decay_method", "weight_decay", "train_batch_size",
+                        "decay_method", "weight_decay", "batch_size",
                         "train_steps", "iterations", "save_steps", "max_save",
                         "seq_len", "reuse_len", "perm_size", "bi_data",
                         "mask_alpha", "mask_beta", "num_predict", "n_token",

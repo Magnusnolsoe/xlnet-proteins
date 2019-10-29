@@ -22,7 +22,7 @@
 	"adam_epsilon": 0.0,
 	"decay_method": "poly/cos",
 	"weight_decay": 0.0,
-    "train_batch_size": 0,
+    "batch_size": 0,
 	"train_steps": 0,
 	"iterations": 0,
 	"save_steps": 0,

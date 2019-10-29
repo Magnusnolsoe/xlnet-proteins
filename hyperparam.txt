@@ -1,0 +1,32 @@
+
+
+512: 
+
+- batch size 16, 8
+
+256: 
+
+- batch size 32, 16, 8
+
+128:
+
+- batch size 64, 32, 16, 8
+
+
+
+256- seq len, 32 - batch size, 70 mil parameters -> 16 GB crash
+
+
+Hyper parameters: (PER SEQ LEN)
+
+mem_len (can be 0... to what?)
+perm_size (MAX reuse len).
+------- MAX value in XLNet-large ----------
+n_layer
+d_model
+d_embed
+n_head
+d_head
+d_inner
+----------------
+batch_size

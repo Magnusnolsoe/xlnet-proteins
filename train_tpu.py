@@ -77,7 +77,7 @@ flags.DEFINE_float("weight_decay", default=0.0,
       help="Weight decay rate.")
 
 # Training config
-flags.DEFINE_integer("train_batch_size", default=16,
+flags.DEFINE_integer("batch_size", default=16,
       help="Size of the train batch across all hosts.")
 flags.DEFINE_integer("train_steps", default=100000,
       help="Total number of training steps.")
@@ -88,10 +88,6 @@ flags.DEFINE_integer("save_steps", default=None,
       "None for not saving checkpoints")
 flags.DEFINE_integer("max_save", default=100000,
       help="Maximum number of checkpoints to save.")
-
-# Validation config
-flags.DEFINE_integer("valid_batch_size", default=16,
-      help="Size of the train batch across all hosts.")
 
 # Data config
 flags.DEFINE_integer("seq_len", default=0,
@@ -253,11 +249,10 @@ def get_input_fn(split):
   """doc."""
   assert split == "train" or split == "valid"
   if split == 'train':
-      batch_size = FLAGS.train_batch_size
       record_info_dir = FLAGS.train_record_info_dir
   else:
-      batch_size = FLAGS.valid_batch_size
       record_info_dir = FLAGS.valid_record_info_dir
+  batch_size = FLAGS.batch_size
 
   input_fn, record_info_dict = data_utils.get_input_fn(
       info_dir=record_info_dir,
@@ -286,6 +281,8 @@ def main(unused_argv):
 
   assert FLAGS.seq_len > 0
   assert FLAGS.perm_size > 0
+
+  FLAGS.batch_size = FLAGS.batch_size * FLAGS.num_hosts
 
   FLAGS.n_token = data_utils.VOCAB_SIZE
   tf.logging.info("n_token {}".format(FLAGS.n_token))
@@ -330,8 +327,8 @@ def main(unused_argv):
       use_tpu=FLAGS.use_tpu,
       config=run_config,
       params={"track_mean": FLAGS.track_mean},
-      train_batch_size=FLAGS.train_batch_size,
-      eval_batch_size=FLAGS.valid_batch_size,
+      train_batch_size=FLAGS.batch_size,
+      eval_batch_size=FLAGS.batch_size,
       eval_on_tpu=FLAGS.use_tpu)
 
   #### Training and Validation
