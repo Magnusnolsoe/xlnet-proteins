@@ -30,7 +30,7 @@ NUM_CORES = 8
 EPOCHS = 10
 # TODO: Fill <FILL_OUT> out!!!
 TPUS = {
-    '128': 'instance-1',
+    '128': 'instance-2',
     '256': '<FILL_OUT>',
     '512': '<FILL_OUT>'
 }
@@ -174,6 +174,7 @@ def run_worker(unused_args):
             conn.experiments(experiment.id).suggestions(suggestion.id).delete()
             fail_count += 1
             if fail_count >= 3: # Stop worker if failed 3 or more times
+                tf.gfile.Remove(worker_state_path)
                 with tf.gfile.Open(worker_state_path, 'w') as f:
                     json.dump({"state": 'FAILED'}, f)
                 break
@@ -197,6 +198,7 @@ def run_worker(unused_args):
         fail_count = 0
     
     if fail_count < 3:
+        tf.gfile.Remove(worker_state_path)
         with tf.gfile.Open(worker_state_path, 'w') as f:
                 json.dump({"state": 'DONE'}, f)
 
