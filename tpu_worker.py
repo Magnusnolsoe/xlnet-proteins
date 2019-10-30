@@ -169,13 +169,13 @@ def run_worker(unused_args):
 
         if start_tpu(config_path): # Only enters if failed
             fail_log = suggestion.assignments
-            with tf.gfile.Open(os.path.join(worker_dir, "{}.json".format(suggestion.id))) as fb:
-                json.dump(fb)
+            with tf.gfile.Open(os.path.join(worker_dir, "{}.json".format(suggestion.id))) as f:
+                json.dump(fail_log, f)
             conn.experiments(experiment.id).suggestions(suggestion.id).delete()
             fail_count += 1
             if fail_count >= 3: # Stop worker if failed 3 or more times
-                with tf.gfile.Open(worker_state_path, 'w') as fb:
-                    json.dump({"state": 'FAILED'})
+                with tf.gfile.Open(worker_state_path, 'w') as f:
+                    json.dump({"state": 'FAILED'}, f)
                 break
         
         result_path = os.path.join(model_dir_total_path, 'results.json')
@@ -197,8 +197,8 @@ def run_worker(unused_args):
         fail_count = 0
     
     if fail_count < 3:
-        with tf.gfile.Open(worker_state_path, 'w') as fb:
-                json.dump({"state": 'DONE'})
+        with tf.gfile.Open(worker_state_path, 'w') as f:
+                json.dump({"state": 'DONE'}, f)
 
 if __name__ == "__main__":
     FLAGS = flags.FLAGS
