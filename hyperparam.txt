@@ -12,8 +12,6 @@
 
 - batch size 64, 32, 16, 8
 
-
-
 256- seq len, 32 - batch size, 70 mil parameters -> 16 GB crash
 
 
@@ -30,3 +28,10 @@ d_head
 d_inner
 ----------------
 batch_size
+learning rate
+dropout
+dropatt
+
+warmup_steps
+weight_decay
+
