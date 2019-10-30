@@ -46,7 +46,7 @@ def master(unused_args):
 
     for seq_len in seq_lens:
       experiment = conn.experiments().create(
-            name=FLAGS.name.join(seq_len),
+            name="{}-seq_len{}".format(FLAGS.name, seq_len),
             project=FLAGS.project_id,
             metrics=[dict(name='pplx', objective='minimize')],
             parameters=[
