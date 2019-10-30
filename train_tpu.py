@@ -309,7 +309,7 @@ def main(unused_argv):
           "d_model": FLAGS.d_model, 
           "n_heads": FLAGS.n_head
   }
-  _dir = get_logdir(FLAGS.logDir, info_dict)
+  _dir = get_logdir(os.path.join(FLAGS.bucket_uri, FLAGS.logDir), info_dict)
   model_fn = get_model_fn(_dir)
 
   ##### Create TPUEstimator
