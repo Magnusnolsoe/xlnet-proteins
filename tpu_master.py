@@ -25,7 +25,7 @@ MAX_WARMUP_STEPS = 5000
 
 def spin_up_worker(api_token, experiment_id, seq_len):
       args = '--api_token={} --experiment_id={} --seq_len={} --bucket_name={} --gcp_project={}'.format(api_token, experiment_id, seq_len, FLAGS.bucket_name, FLAGS.gcp_project)
-      os.system("python tpu_worker.py " + args) # TODO: Use another non-blocking call!
+      os.system("python3 tpu_worker.py " + args) # TODO: Use another non-blocking call!
 
 def master(unused_args):
     del unused_args

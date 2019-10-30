@@ -98,7 +98,7 @@ def generate_param_config(dirname, suggestion_id, params):
                  "d_model": d_model, "d_embed": d_embed, "n_head": n_head, "d_head": d_head, "d_inner": d_inner,
                  "dropout": dropout, "dropatt": dropatt, "untie_r": None, "summary_type": 'last', 
                  "ff_activation": 'relu', "use_bfloat16": True, "init": 'normal', "init_std": None,
-                 "init_range": None, "bucket_uri": FLAGS.bucket_name, "epochs": EPOCHS}
+                 "init_range": None, "bucket_uri": FLAGS.bucket_name, "epochs": EPOCHS, "python": "python3"}
 
     path = os.path.join(FLAGS.bucket_name, "param_configs", "{}.json".format(suggestion_id))
     with tf.gfile.Open(path, 'w') as fp:
@@ -133,8 +133,9 @@ def start_tpu(config_path):
         if params[key] is not None:
             args += "--{}={} ".format(key, params[key])
 
+    python = params['python']
     # returns 0 if failed, and 1 if succeeded
-    return os.system("python train_tpu.py " + args)
+    return os.system(python + " train_tpu.py " + args)
 
 
 def run_worker(unused_args):
