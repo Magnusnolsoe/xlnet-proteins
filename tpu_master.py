@@ -1,6 +1,7 @@
 from sigopt import Connection
 from absl import flags, app
 import numpy as np  
+import os
 
 # SigOpt parameters
 flags.DEFINE_string("name", default="",
@@ -20,12 +21,12 @@ flags.DEFINE_integer("seq_len", default=0,
 
 MAX_WARMUP_STEPS = 5000
 
-def spin_up_worker(experiment_id):
-    
-    # TODO: Create folders, config files and start worker
-    pass
+def spin_up_worker(api_token, experiment_id):
+      args = '--api_token={} --experiment_id={}'.format(api_token, experiment_id)
+      os.system("python tpu_worker.py " + args)
 
-def master(_):
+def master(unused_args):
+    del unused_args
 
     conn = Connection(client_token=FLAGS.api_token)
 
@@ -42,23 +43,23 @@ def master(_):
             dict(name='n_head', type='int', bounds=dict(min=1,max=16)),
             dict(name='d_head', type='int', bounds=dict(min=1,max=64)),
             dict(name='d_inner', type='int', bounds=dict(min=1,max=4096)),
-            dict(name='batch_size', type='categorical', categorical_values=[64, 32, 16, 8]),
+            dict(name='batch_size', type='categorical', categorical_values=list(map(str, [64, 32, 16, 8]))),
             dict(name='learning_rate', type='double', bounds=dict(min=1e-6, max=1e-1)),
             dict(name='dropout', type='double', bounds=dict(min=0,max=1)),
             dict(name='dropatt', type='double', bounds=dict(min=0,max=1)),
             dict(name='warmup_steps', type='int', bounds=dict(min=0,max=MAX_WARMUP_STEPS)),
-            dict(name='weight_decay', type='categorical', categorical_values=[1.e-08, 1.e-07, 1.e-06, 1.e-05, 1.e-04, 1.e-03, 1.e-02, 1.e-01, 1.e+00, 1.e+01])
+            dict(name='weight_decay', type='categorical', categorical_values=list(map(str, [1.e-08, 1.e-07, 1.e-06, 1.e-05, 1.e-04])))
         ],
         metadata=dict(
-            'avg_training_time'=0,
-            'avg_evaluation_time'=0
+            avg_training_time=0,
+            avg_evaluation_time=0
         ),
         observation_budget=FLAGS.budget,
         parallel_bandwidth=FLAGS.num_workers,
     )
 
     for _ in range(FLAGS.num_workers):
-        spin_up_worker(experiment.id)
+        spin_up_worker(FLAGS.api_token, experiment.id)
 
 if __name__ == "__main__":
 
