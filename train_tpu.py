@@ -11,6 +11,7 @@ from absl import flags
 import absl.logging as _logging  # pylint: disable=unused-import
 
 import numpy as np
+import time
 
 import tensorflow as tf
 import model_utils
@@ -44,10 +45,8 @@ flags.DEFINE_string("run_id", default=None,
       help="Id of current run.")
 flags.DEFINE_integer("num_passes", default=1,
       help="Number of passed used for training.")
-flags.DEFINE_string("train_record_info_dir", default=None,
-      help="Path to local directory containing training `record_info-lm.json`.")
-flags.DEFINE_string("valid_record_info_dir", default=None,
-      help="Path to local directory containing validation `record_info-lm.json`.")
+flags.DEFINE_string("record_info_dir", default=None,
+      help="Path to local directory containing `record_info-lm.json`.")
 flags.DEFINE_string("model_dir", default=None,
       help="Estimator model_dir.")
 flags.DEFINE_string("init_checkpoint", default=None,
@@ -248,10 +247,8 @@ def get_cache_fn(mem_len):
 def get_input_fn(split):
   """doc."""
   assert split == "train" or split == "valid"
-  if split == 'train':
-      record_info_dir = FLAGS.train_record_info_dir
-  else:
-      record_info_dir = FLAGS.valid_record_info_dir
+
+  record_info_dir = os.path.join(FLAGS.record_info_dir, split)
   batch_size = FLAGS.batch_size
 
   input_fn, record_info_dict = data_utils.get_input_fn(
@@ -333,12 +330,20 @@ def main(unused_argv):
 
   #### Training and Validation
   last_err, c = 0, 0
+  train_times, eval_times = [], []
   for i in range(FLAGS.epochs):
+
       tf.logging.info("#### Starting training cycle")
+      start = time.time()
       train_ret = estimator.train(input_fn=train_input_fn, steps=train_steps)
+      end = time.time()
+      train_times.append((end-start)/60)
 
       tf.logging.info("#### Starting evaluation/validation cycle")
+      start = time.time()
       eval_ret = estimator.evaluate(input_fn=valid_input_fn, steps=valid_steps)
+      end = time.time()
+      eval_times.append((end-start)/60)
 
       '''
       if eval_ret["metric_loss"] >= last_err: # TODO: Should be rounded!
@@ -351,9 +356,15 @@ def main(unused_argv):
       '''
       
       tf.logging.info("################## EPOCH {} ##################".format(i))
-
-  with open(os.path.join(FLAGS.model_dir, "results.json"), 'w') as f:
-        json.dump(eval_ret, f)
+  
+  result = {
+        'loss': eval_ret["metric_loss"],
+        'pplx': tf.exp(eval_ret["metric_loss"]),
+        'avg_train_time': np.mean(train_times),
+        'avg_eval_time': np.mean(eval_times)
+  }
+  with tf.gfile.Open(os.path.join(FLAGS.bucket_uri, FLAGS.model_dir, "results.json"), "w") as fp:
+        json.dump(result, fp)
 
 
 if __name__ == "__main__":

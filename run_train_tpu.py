@@ -26,7 +26,7 @@ def main(_):
                         "d_model", "d_embed", "n_head", "d_head", "d_inner",
                         "dropout", "dropatt", "untie_r", "summary_type", 
                         "ff_activation", "use_bfloat16", "init", "init_std",
-                        "init_range", "bucket_uri"]
+                        "init_range", "bucket_uri", "epochs"]
         
         args = ""
         for key in param_keys:
