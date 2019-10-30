@@ -30,7 +30,7 @@ NUM_CORES = 8
 EPOCHS = 10
 # TODO: Fill <FILL_OUT> out!!!
 TPUS = {
-    '128': 'instance-2',
+    '128': 'instance-1',
     '256': '<FILL_OUT>',
     '512': '<FILL_OUT>'
 }
