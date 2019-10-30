@@ -25,7 +25,7 @@ flags.DEFINE_string("seq_len", default="",
         help="Sequence length")
 
 # Constants
-NUM_HOSTS = 5
+NUM_HOSTS = 1
 NUM_CORES = 8
 EPOCHS = 10
 # TODO: Fill <FILL_OUT> out!!!
