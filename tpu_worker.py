@@ -145,7 +145,7 @@ def run_worker(unused_args):
 
     experiment = conn.experiments(FLAGS.experiment_id).fetch()
 
-    worker_dir = os.path.join(FLAGS.bucket_name, "workers", str(experiment.id))
+    worker_dir = os.path.join(FLAGS.bucket_name, "workers", str(experiment.id), FLAGS.tpu_name)
     tf.gfile.MakeDirs(worker_dir)
     worker_state_path = os.path.join(worker_dir, "status.json")
 
