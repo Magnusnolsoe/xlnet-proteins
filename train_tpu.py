@@ -283,6 +283,9 @@ def main(unused_argv):
 
   FLAGS.n_token = data_utils.VOCAB_SIZE
   tf.logging.info("n_token {}".format(FLAGS.n_token))
+  
+  if FLAGS.bucket_uri is not None:
+        FLAGS.model_dir = os.path.join(FLAGS.bucket_uri, FLAGS.model_dir)
 
   if not tf.gfile.Exists(FLAGS.model_dir):
     tf.gfile.MakeDirs(FLAGS.model_dir)

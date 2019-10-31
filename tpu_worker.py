@@ -21,6 +21,8 @@ flags.DEFINE_string("bucket_name", default="",
         help="Name of gcp bucket")
 
 # TPU parameters
+flags.DEFINE_string("tpu_name", default="",
+        help="TPU name")
 flags.DEFINE_string("seq_len", default="",
         help="Sequence length")
 
