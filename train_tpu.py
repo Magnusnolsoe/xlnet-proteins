@@ -152,6 +152,8 @@ flags.DEFINE_float("init_range", default=0.1,
 
 FLAGS = flags.FLAGS
 
+# Internal configuration
+PATIENCE = 5 # Early stopping patience
 
 def get_model_fn(logdir):
   """doc."""
@@ -332,7 +334,8 @@ def main(unused_argv):
       eval_on_tpu=FLAGS.use_tpu)
 
   #### Training and Validation
-  last_err, c = 0, 0
+  eval_errs = []
+  xs = list(range(PATIENCE))
   train_times, eval_times = [], []
   for i in range(FLAGS.epochs):
 
@@ -348,21 +351,20 @@ def main(unused_argv):
       end = time.time()
       eval_times.append((end-start)/60)
 
-      '''
-      if eval_ret["metric_loss"] >= last_err: # TODO: Should be rounded!
-            c += 1
-            if c >= 5:
+      # Early Stopping based on gradient from last PATIENCE points
+      eval_errs.append(eval_ret['loss'])
+      if len(eval_errs) > PATIENCE:
+            last_errs = eval_errs[-PATIENCE:]
+            slope = np.polyfit(xs, last_errs, deg=1)[0]
+            if slope <= 0:
                   break
-      else:
-            c = 0
-      last_err = eval_ret["metric_loss"]
-      '''
-      
+
       tf.logging.info("################## EPOCH {} ##################".format(i))
   
+  best_loss = min(eval_errs)
   result = {
-        'loss': eval_ret["metric_loss"],
-        'pplx': tf.exp(eval_ret["metric_loss"]),
+        'loss': best_loss,
+        'pplx': tf.exp(best_loss),
         'avg_train_time': np.mean(train_times),
         'avg_eval_time': np.mean(eval_times)
   }
