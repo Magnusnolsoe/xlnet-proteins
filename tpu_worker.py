@@ -31,6 +31,7 @@ NUM_HOSTS = 1
 NUM_CORES = 8
 EPOCHS = 50
 FAIL_THRESHOLD = 10
+ITERATIONS = 10000
 
 TPU_ZONES = {
     'instance-1': "us-central1-a",
@@ -89,7 +90,7 @@ def generate_param_config(dirname, suggestion_id, params):
                  "init_checkpoint": None, "logDir": 'logging', "learning_rate": lr_rate, "clip": None,
                  "min_lr_ratio": None, "warmup_steps": warmup_steps, "adam_epsilon": None,
                  "decay_method": 'poly', "weight_decay": weight_decay, "batch_size": batch_size,
-                 "train_steps": None, "iterations": None, "save_steps": None, "max_save": None,
+                 "train_steps": None, "iterations": ITERATIONS, "save_steps": None, "max_save": None,
                  "seq_len": FLAGS.seq_len, "reuse_len": reuse_len, "perm_size": reuse_len, 
                  "bi_data": False, "mask_alpha": 6, "mask_beta": 1, "num_predict": n_pred, "n_token": VOCAB_SIZE,
                  "mem_len": mem_len, "same_length": None, "clamp_len": None, "n_layer": n_layer,
