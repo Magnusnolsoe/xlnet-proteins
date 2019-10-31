@@ -154,6 +154,7 @@ FLAGS = flags.FLAGS
 
 # Internal configuration
 PATIENCE = 5 # Early stopping patience
+ROUNDING_PRECISION = 3 # precision of error when doing early stopping
 
 def get_model_fn(logdir):
   """doc."""
@@ -355,7 +356,7 @@ def main(unused_argv):
       eval_errs.append(eval_ret['loss'])
       if len(eval_errs) > PATIENCE:
             last_errs = eval_errs[-PATIENCE:]
-            slope = np.polyfit(xs, last_errs, deg=1)[0]
+            slope = round(np.polyfit(xs, last_errs, deg=1)[0], ROUNDING_PRECISION)
             if slope <= 0:
                   break
 
