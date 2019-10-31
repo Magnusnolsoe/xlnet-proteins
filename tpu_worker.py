@@ -23,6 +23,8 @@ flags.DEFINE_string("bucket_name", default="",
 # TPU parameters
 flags.DEFINE_string("tpu_name", default="",
         help="TPU name")
+flags.DEFINE_string("tpu_zone", default="",
+        help="TPU zone")
 flags.DEFINE_string("seq_len", default="",
         help="Sequence length")
 
@@ -30,17 +32,7 @@ flags.DEFINE_string("seq_len", default="",
 NUM_HOSTS = 1
 NUM_CORES = 8
 EPOCHS = 10
-# TODO: Fill <FILL_OUT> out!!!
-TPUS = {
-    '128': 'instance-2',
-    '256': '<FILL_OUT>',
-    '512': '<FILL_OUT>'
-}
-TPU_ZONES = {
-    '128': 'us-central1-a',
-    '256': '<FILL_OUT>',
-    '512': '<FILL_OUT>'
-}
+
 
 def generate_model_dir(dirname):
     model_dir_basename = os.path.join("models", dirname)
@@ -77,17 +69,13 @@ def generate_param_config(dirname, suggestion_id, params):
     warmup_steps = params['warmup_steps']
     weight_decay = float(params['weight_decay'])
 
-    # TPU parameters
-    tpu = TPUS[FLAGS.seq_len]
-    zone = TPU_ZONES[FLAGS.seq_len]
-
     seq_len = int(FLAGS.seq_len)
     reuse_len = seq_len // 2
     n_pred = int(round(0.15*seq_len))
     record_info_dir = get_record_info_dir(reuse_len, n_pred, batch_size)
 
-    configs = {"master": None, "tpu": tpu, "gcp_project": FLAGS.gcp_project,
-                 "tpu_zone": zone, "use_tpu": True, "num_hosts": NUM_HOSTS,
+    configs = {"master": None, "tpu": FLAGS.tpu_name, "gcp_project": FLAGS.gcp_project,
+                 "tpu_zone": FLAGS.tpu_zone, "use_tpu": True, "num_hosts": NUM_HOSTS,
                  "num_core_per_host": NUM_CORES, "track_mean": True,
                  "run_id": suggestion_id, "num_passes": None, "record_info_dir": record_info_dir, "model_dir": dirname,
                  "init_checkpoint": None, "logDir": 'logging', "learning_rate": lr_rate, "clip": None,

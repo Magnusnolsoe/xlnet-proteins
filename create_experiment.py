@@ -1,5 +1,6 @@
 from sigopt import Connection
 from absl import flags, app
+from tensorflow import logging
 
 # SigOpt parameters
 flags.DEFINE_string("exp_name", default="default",
@@ -49,8 +50,7 @@ def main(unused_args):
         parallel_bandwidth=FLAGS.num_workers,
     )
 
-
-
+    logging.info("Experiment ID: " + str(experiment.id))
 
 if __name__ == "__main__":
     FLAGS = flags.FLAGS
