@@ -31,7 +31,7 @@ NUM_HOSTS = 1
 NUM_CORES = 8
 EPOCHS = 50
 FAIL_THRESHOLD = 10
-ITERATIONS = 10000
+ITERATIONS = 50000
 
 TPU_ZONES = {
     'instance-1': "us-central1-a",
