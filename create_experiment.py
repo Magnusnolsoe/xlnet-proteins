@@ -22,9 +22,9 @@ def main(unused_args):
     conn = Connection(client_token=FLAGS.api_token)
 
     batches = {
-        '128': ['64', '32', '16', '8'],
-        '256': ['32', '16', '8'],
-        '512': ['16', '8']
+        128: ['64', '32', '16', '8'],
+        256: ['32', '16', '8'],
+        512: ['16', '8']
     }
     experiment = conn.experiments().create(
         name=FLAGS.exp_name,
