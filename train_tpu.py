@@ -338,6 +338,7 @@ def main(unused_argv):
   eval_errs = []
   xs = list(range(PATIENCE))
   train_times, eval_times = [], []
+  stopped_early = False
   for i in range(FLAGS.epochs):
 
       tf.logging.info("#### Starting training cycle")
@@ -357,7 +358,8 @@ def main(unused_argv):
       if len(eval_errs) > PATIENCE:
             last_errs = eval_errs[-PATIENCE:]
             slope = round(np.polyfit(xs, last_errs, deg=1)[0], ROUNDING_PRECISION)
-            if slope <= 0:
+            if slope >= 0:
+                  stopped_early = True
                   break
 
       tf.logging.info("################## EPOCH {} ##################".format(i))
@@ -367,7 +369,8 @@ def main(unused_argv):
         'loss': best_loss,
         'pplx': tf.exp(best_loss),
         'avg_train_time': np.mean(train_times),
-        'avg_eval_time': np.mean(eval_times)
+        'avg_eval_time': np.mean(eval_times),
+        'stopped_early': stopped_early,
   }
   with tf.gfile.Open(os.path.join(FLAGS.bucket_uri, FLAGS.model_dir, "results.json"), "w") as fp:
         json.dump(result, fp)

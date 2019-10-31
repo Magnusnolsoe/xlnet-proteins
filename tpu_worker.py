@@ -170,6 +170,7 @@ def run_worker(unused_args):
                 suggestion=suggestion.id
             )
             fail_count += 1
+            tf.logging.info("Failed with observation: {}, fail_count: {}".format(observation, fail_count))
             if fail_count >= FAIL_THRESHOLD: # Stop worker if failed FAIL_THRESHOLD or more times
                 with tf.gfile.Open(worker_state_path, 'w') as f:
                     json.dump({"state": 'FAILED'}, f)
@@ -185,7 +186,7 @@ def run_worker(unused_args):
             observation = conn.experiments(experiment.id).observations().create(
                 suggestion=suggestion.id,
                 value=results['pplx'],
-                metadata=dict(avg_train_time=results['avg_train_time'], avg_eval_time=results['avg_eval_time'])
+                metadata=dict(avg_train_time=results['avg_train_time'], avg_eval_time=results['avg_eval_time'], stopped_early=results['stopped_early'])
             )
 
             # Update the experiment object
