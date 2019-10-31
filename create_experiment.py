@@ -39,7 +39,7 @@ def main(unused_args):
                 dict(name='n_head', type='int', bounds=dict(min=1,max=16)),
                 dict(name='d_head', type='int', bounds=dict(min=1,max=64)),
                 dict(name='d_inner', type='int', bounds=dict(min=1,max=4096)),
-                dict(name='batch_size', type='categorical', categorical_values=batches[seq_len]),
+                dict(name='batch_size', type='categorical', categorical_values=batches[FLAGS.seq_len]),
                 dict(name='learning_rate', type='double', bounds=dict(min=1e-6, max=1e-2)),
                 dict(name='dropout', type='double', bounds=dict(min=0,max=0.8)),
                 dict(name='dropatt', type='double', bounds=dict(min=0,max=0.8)),
