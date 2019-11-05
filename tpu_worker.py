@@ -157,10 +157,7 @@ def run_worker(unused_args):
 
     fail_count = 0
     while experiment.progress.observation_count < experiment.observation_budget:
-        if FLAGS.open:
-            suggestion = next(conn.experiments(experiment.id).suggestions().fetch(state="open").iterate_pager())
-        else:
-            suggestion = conn.experiments(experiment.id).suggestions().create()
+        suggestion = conn.experiments(experiment.id).suggestions().create()
 
         # create model_dir and param config file
         model_dir_basename = generate_model_dir(suggestion.id)
