@@ -365,7 +365,7 @@ def main(unused_argv):
       tf.logging.info("################## EPOCH {} ##################".format(i))
   
   best_loss = min(eval_errs)
-  best_pplx = tf.exp(best_loss)
+  best_pplx = np.exp(best_loss)
   result = {
         'loss': str(best_loss),
         'pplx': str(best_pplx),

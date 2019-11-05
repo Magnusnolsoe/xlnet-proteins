@@ -25,8 +25,8 @@ flags.DEFINE_string("tpu_name", default="",
         help="TPU name")
 flags.DEFINE_string("seq_len", default="",
         help="Sequence length")
-flags.DEFINE_bool("open", default=False,
-        help="wether to run on open suggestions or not")
+flags.DEFINE_bool("mini", default=False,
+        help="wether to run on mini test dataset or not")
 
 # Internal Configurations
 NUM_HOSTS = 1
