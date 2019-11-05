@@ -369,8 +369,8 @@ def main(unused_argv):
   result = {
         'loss': str(best_loss),
         'pplx': str(best_pplx),
-        'avg_train_time': np.mean(train_times),
-        'avg_eval_time': np.mean(eval_times),
+        'avg_train_time': str(np.mean(train_times)),
+        'avg_eval_time': str(np.mean(eval_times)),
         'stopped_early': str(stopped_early),
   }
   with tf.gfile.Open(os.path.join(FLAGS.bucket_uri, "results", FLAGS.run_id), "w") as fp:
