@@ -72,7 +72,7 @@ def generate_param_config(dirname, suggestion_id, params):
     n_head = params['n_head']
     d_head = pow(2,params['d_head'])
     d_inner = pow(2,params['d_inner'])
-    batch_size = int(params['batch_size'])
+    batch_size = 32 if FLAGS.mini else int(params['batch_size'])
     lr_rate = params['learning_rate']
     dropout = params['dropout']/10
     dropatt = params['dropatt']/10
@@ -82,10 +82,10 @@ def generate_param_config(dirname, suggestion_id, params):
     else:
         weight_decay = pow(10, params['weight_decay'])
 
-    seq_len = int(FLAGS.seq_len)
+    seq_len = 256 if FLAGS.mini else int(FLAGS.seq_len)
     reuse_len = seq_len // 2
     n_pred = int(round(0.15*seq_len))
-    record_info_dir = get_record_info_dir(reuse_len, n_pred, batch_size)
+    record_info_dir = os.path.join("proc_data", "mini") if FLAGS.mini else get_record_info_dir(reuse_len, n_pred, batch_size)
     tpu_zone = TPU_ZONES[FLAGS.tpu_name]
 
     configs = {"master": None, "tpu": FLAGS.tpu_name, "gcp_project": FLAGS.gcp_project,
