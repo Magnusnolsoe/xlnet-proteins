@@ -373,7 +373,7 @@ def main(unused_argv):
         'avg_eval_time': str(np.mean(eval_times)),
         'stopped_early': str(stopped_early),
   }
-  with tf.gfile.Open(os.path.join(FLAGS.bucket_uri, "results", FLAGS.run_id), "w") as fp:
+  with tf.gfile.Open(os.path.join(FLAGS.bucket_uri, "results", "{}.json".format(FLAGS.run_id)), "w") as fp:
         json.dump(result, fp)
 
 
