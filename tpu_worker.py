@@ -84,7 +84,7 @@ def generate_param_config(dirname, suggestion_id, params):
 
     seq_len = 512 if FLAGS.mini else int(FLAGS.seq_len)
     reuse_len = seq_len // 2
-    n_pred = int(round(0.15*seq_len))
+    n_pred = 85 if FLAGS.mini else int(round(0.15*seq_len))
     record_info_dir = os.path.join("proc_data", "mini") if FLAGS.mini else get_record_info_dir(reuse_len, n_pred, batch_size)
     tpu_zone = TPU_ZONES[FLAGS.tpu_name]
 
