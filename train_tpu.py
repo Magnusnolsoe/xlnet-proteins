@@ -354,7 +354,7 @@ def main(unused_argv):
       eval_times.append((end-start)/60)
 
       # Early Stopping based on gradient from last PATIENCE points
-      eval_errs.append(eval_ret['loss'])
+      eval_errs.append(eval_ret['metric_loss'])
       if len(eval_errs) > PATIENCE:
             last_errs = eval_errs[-PATIENCE:]
             slope = round(np.polyfit(xs, last_errs, deg=1)[0], ROUNDING_PRECISION)
@@ -365,9 +365,10 @@ def main(unused_argv):
       tf.logging.info("################## EPOCH {} ##################".format(i))
   
   best_loss = min(eval_errs)
+  best_pplx = tf.exp(best_loss)
   result = {
-        'loss': best_loss,
-        'pplx': tf.exp(best_loss),
+        'loss': str(best_loss),
+        'pplx': str(best_pplx),
         'avg_train_time': np.mean(train_times),
         'avg_eval_time': np.mean(eval_times),
         'stopped_early': stopped_early,
