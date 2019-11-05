@@ -158,7 +158,7 @@ def run_worker(unused_args):
     fail_count = 0
     while experiment.progress.observation_count < experiment.observation_budget:
         if FLAGS.open:
-            suggestion = conn.experiments(experiment.id).suggestions().fetch(state="open")[0]
+            suggestion = next(conn.experiments(experiment.id).suggestions().fetch(state="open").iterate_pager())
         else:
             suggestion = conn.experiments(experiment.id).suggestions().create()
 
