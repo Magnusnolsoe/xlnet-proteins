@@ -1,1 +1,1 @@
-{"filenames": ["proc_data\\mini_train.bsz-32.seqlen-512.reuse-256.uni.alpha-6.beta-1.fnp-85.tfrecords"], "num_batch": 485}
+{"filenames": ["proc_data\\mini\\mini_train.bsz-32.seqlen-512.reuse-256.uni.alpha-6.beta-1.fnp-85.tfrecords"], "num_batch": 485}
