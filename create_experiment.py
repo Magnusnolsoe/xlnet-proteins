@@ -31,30 +31,6 @@ def main(unused_args):
         project=FLAGS.project_id,
         metrics=[dict(name='pplx', objective='minimize')],
         parameters=[
-                dict(name='mem_len', type='int', bounds=dict(min=0,max=10)),        # Multiply
-                dict(name='perm_size', type='int', bounds=dict(min=1,max=2)),
-                dict(name='n_layer', type='int', bounds=dict(min=1,max=2)),
-                dict(name='d_model', type='int', bounds=dict(min=4,max=5)),         # Multiply
-                dict(name='d_embed', type='int', bounds=dict(min=4,max=5)),         # Multiply
-                dict(name='n_head', type='int', bounds=dict(min=1,max=2)),
-                dict(name='d_head', type='int', bounds=dict(min=1,max=2)),          # Multiply
-                dict(name='d_inner', type='int', bounds=dict(min=4,max=5)),        # Multiply
-                dict(name='batch_size', type='categorical', categorical_values=batches[FLAGS.seq_len]),
-                dict(name='learning_rate', type='double', bounds=dict(min=1e-6, max=1e-2)),
-                dict(name='dropout', type='int', bounds=dict(min=0,max=9)),         # Multiply
-                dict(name='dropatt', type='int', bounds=dict(min=0,max=9)),         # Multiply
-                dict(name='warmup_steps', type='int', bounds=dict(min=0,max=10)),   # Multiply
-                dict(name='weight_decay', type='int', bounds=dict(min=-8, max=1))   # Mutliply
-        ],
-        observation_budget=FLAGS.budget,
-        parallel_bandwidth=FLAGS.num_workers,
-    )
-    '''
-    experiment = conn.experiments().create(
-        name=FLAGS.exp_name,
-        project=FLAGS.project_id,
-        metrics=[dict(name='pplx', objective='minimize')],
-        parameters=[
                 dict(name='mem_len', type='int', bounds=dict(min=0,max=50)),        # Multiply
                 dict(name='perm_size', type='int', bounds=dict(min=1,max=FLAGS.seq_len//2)),
                 dict(name='n_layer', type='int', bounds=dict(min=1,max=6)),
@@ -73,7 +49,6 @@ def main(unused_args):
         observation_budget=FLAGS.budget,
         parallel_bandwidth=FLAGS.num_workers,
     )
-    '''
 
     logging.info("Experiment ID: " + str(experiment.id))
 
