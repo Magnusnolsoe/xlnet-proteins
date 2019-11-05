@@ -96,7 +96,7 @@ def generate_param_config(dirname, suggestion_id, params):
                  "min_lr_ratio": None, "warmup_steps": warmup_steps, "adam_epsilon": None,
                  "decay_method": 'poly', "weight_decay": weight_decay, "batch_size": batch_size,
                  "train_steps": None, "iterations": ITERATIONS, "save_steps": None, "max_save": None,
-                 "seq_len": FLAGS.seq_len, "reuse_len": reuse_len, "perm_size": reuse_len, 
+                 "seq_len": seq_len, "reuse_len": reuse_len, "perm_size": reuse_len, 
                  "bi_data": False, "mask_alpha": 6, "mask_beta": 1, "num_predict": n_pred, "n_token": VOCAB_SIZE,
                  "mem_len": mem_len, "same_length": None, "clamp_len": None, "n_layer": n_layer,
                  "d_model": d_model, "d_embed": d_embed, "n_head": n_head, "d_head": d_head, "d_inner": d_inner,
