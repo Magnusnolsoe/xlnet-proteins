@@ -25,8 +25,6 @@ flags.DEFINE_string("tpu_name", default="",
         help="TPU name")
 flags.DEFINE_string("seq_len", default="",
         help="Sequence length")
-flags.DEFINE_bool("mini", default=False,
-        help="wether to run on mini test dataset or not")
 
 # Internal Configurations
 NUM_HOSTS = 1
@@ -82,10 +80,10 @@ def generate_param_config(dirname, suggestion_id, params):
     else:
         weight_decay = pow(10, params['weight_decay'])
 
-    seq_len = 512 if FLAGS.mini else int(FLAGS.seq_len)
+    seq_len = int(FLAGS.seq_len)
     reuse_len = seq_len // 2
-    n_pred = 85 if FLAGS.mini else int(round(0.15*seq_len))
-    record_info_dir = os.path.join("proc_data", "mini") if FLAGS.mini else get_record_info_dir(reuse_len, n_pred, batch_size)
+    n_pred = int(round(0.15*seq_len))
+    record_info_dir = get_record_info_dir(reuse_len, n_pred, batch_size)
     tpu_zone = TPU_ZONES[FLAGS.tpu_name]
 
     configs = {"master": None, "tpu": FLAGS.tpu_name, "gcp_project": FLAGS.gcp_project,

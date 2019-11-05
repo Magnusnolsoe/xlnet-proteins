@@ -258,7 +258,7 @@ def get_input_fn(
         record_info_path = os.path.join(os.path.join(bucket_uri, info_dir), basename)
     else:
         record_info_path = os.path.join(info_dir, basename)
-    print(record_info_path)
+
     assert tf.io.gfile.exists(record_info_path)
 
     record_info = {"num_batch": 0, "filenames": []}
