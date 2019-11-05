@@ -371,7 +371,7 @@ def main(unused_argv):
         'pplx': str(best_pplx),
         'avg_train_time': np.mean(train_times),
         'avg_eval_time': np.mean(eval_times),
-        'stopped_early': stopped_early,
+        'stopped_early': str(stopped_early),
   }
   with tf.gfile.Open(os.path.join(FLAGS.bucket_uri, "results", FLAGS.run_id), "w") as fp:
         json.dump(result, fp)
