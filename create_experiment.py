@@ -44,7 +44,7 @@ def main(unused_args):
                 dict(name='dropout', type='int', bounds=dict(min=0,max=9)),         # Multiply
                 dict(name='dropatt', type='int', bounds=dict(min=0,max=9)),         # Multiply
                 dict(name='warmup_steps', type='int', bounds=dict(min=0,max=10)),   # Multiply
-                dict(name='weight_decay', type='categorical', categorical_values=["0", "1.e-08", "1.e-06", "1.e-04", "1.e-02", "1.e-01"])
+                dict(name='weight_decay', type='int', bounds=dict(min=-8, max=1))   # Mutliply
         ],
         observation_budget=FLAGS.budget,
         parallel_bandwidth=FLAGS.num_workers,

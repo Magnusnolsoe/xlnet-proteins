@@ -25,6 +25,8 @@ flags.DEFINE_string("tpu_name", default="",
         help="TPU name")
 flags.DEFINE_string("seq_len", default="",
         help="Sequence length")
+flags.DEFINE_bool("open", default=False,
+        help="wether to run on open suggestions or not")
 
 # Internal Configurations
 NUM_HOSTS = 1
@@ -75,7 +77,10 @@ def generate_param_config(dirname, suggestion_id, params):
     dropout = params['dropout']/10
     dropatt = params['dropatt']/10
     warmup_steps = params['warmup_steps']*100
-    weight_decay = float(params['weight_decay'])
+    if params['weight_decay'] == 0:
+        weight_decay = 0
+    else:
+        weight_decay = pow(10, params['weight_decay'])
 
     seq_len = int(FLAGS.seq_len)
     reuse_len = seq_len // 2
@@ -152,7 +157,10 @@ def run_worker(unused_args):
 
     fail_count = 0
     while experiment.progress.observation_count < experiment.observation_budget:
-        suggestion = conn.experiments(experiment.id).suggestions().create()
+        if FLAGS.open:
+            suggestion = conn.experiments(experiment.id).suggestions().fetch(state="open")[0]
+        else:
+            suggestion = conn.experiments(experiment.id).suggestions().create()
 
         # create model_dir and param config file
         model_dir_basename = generate_model_dir(suggestion.id)
