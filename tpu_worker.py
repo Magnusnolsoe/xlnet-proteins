@@ -70,7 +70,7 @@ def generate_param_config(dirname, suggestion_id, params):
     n_head = params['n_head']
     d_head = pow(2,params['d_head'])
     d_inner = pow(2,params['d_inner'])
-    batch_size = 32 if FLAGS.mini else int(params['batch_size'])
+    batch_size = int(params['batch_size'])
     lr_rate = params['learning_rate']
     dropout = params['dropout']/10
     dropatt = params['dropatt']/10
