@@ -206,7 +206,7 @@ def run_worker(unused_args):
             observation = conn.experiments(experiment.id).observations().create(
                 suggestion=suggestion.id,
                 value=float(results['pplx']),
-                metadata=dict(avg_train_time=results['avg_train_time'], avg_eval_time=results['avg_eval_time'], stopped_early=results['stopped_early'])
+                metadata=dict(avg_train_time=results['avg_train_time'], avg_eval_time=results['avg_eval_time'], stopped_early=results['stopped_early'], last_errors=results['last_errors'], slope=results['slope'], epoch=results['epoch'])
             )
 
             # Update the experiment object

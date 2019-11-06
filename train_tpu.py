@@ -367,12 +367,18 @@ def main(unused_argv):
   
   best_loss = min(eval_errs)
   best_pplx = np.exp(best_loss)
+  if last_errs is None:
+        last_errs = []
+        slope = 0
   result = {
         'loss': str(best_loss),
         'pplx': str(best_pplx),
         'avg_train_time': str(np.mean(train_times)),
         'avg_eval_time': str(np.mean(eval_times)),
         'stopped_early': str(stopped_early),
+        'last_errors': str(last_errs),
+        'slope': str(slope),
+        'epoch': str(i)
   }
   with tf.gfile.Open(os.path.join(FLAGS.bucket_uri, "results", "{}.json".format(FLAGS.run_id)), "w") as fp:
         json.dump(result, fp)
