@@ -1,4 +1,3 @@
-import socket
 import os
 import json
 import tensorflow as tf
@@ -153,7 +152,6 @@ def run_worker(unused_args):
     del unused_args
 
     conn = Connection(client_token=FLAGS.api_token)
-    hostname = socket.gethostname()
 
     experiment = conn.experiments(FLAGS.experiment_id).fetch()
 
