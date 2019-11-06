@@ -55,8 +55,6 @@ flags.DEFINE_string("logDir", default="logging",
       help="Path to logging directory.")
 flags.DEFINE_string("bucket_uri", default=None,
       help="URI of gcp bucket.")
-flags.DEFINE_integer("epochs", default=1,
-      help="Number of epochs to run.")
 
 # Optimization config
 flags.DEFINE_float("learning_rate", default=1e-4,
@@ -87,6 +85,8 @@ flags.DEFINE_integer("save_steps", default=None,
       "None for not saving checkpoints")
 flags.DEFINE_integer("max_save", default=100000,
       help="Maximum number of checkpoints to save.")
+flags.DEFINE_integer("epochs", default=1,
+      help="Number of epochs to run.")
 
 # Data config
 flags.DEFINE_integer("seq_len", default=0,
@@ -163,7 +163,7 @@ def get_model_fn(logdir):
     #### Training or Evaluation
     is_training = (mode == tf.estimator.ModeKeys.TRAIN)
     #assert is_training
-    assert tf.gfile.Exists(logdir)
+    #assert tf.gfile.Exists(logdir)
 
     #### Retrieve `mems` from `params["cache"]`
     mems = {}
@@ -199,15 +199,16 @@ def get_model_fn(logdir):
       monitor_dict['pplx'] = tf.math.exp(total_loss)
       
       #### Creating host calls
+      '''
       host_call = function_builder.construct_scalar_host_call(
             monitor_dict=monitor_dict,
             log_dir=logdir,
             prefix="train/",
             reduce_fn=tf.reduce_mean)
-
+      '''
       #### Constucting training TPUEstimatorSpec with new cache.
       train_spec = tf.contrib.tpu.TPUEstimatorSpec(
-            mode=mode, loss=total_loss, train_op=train_op, host_call=host_call,
+            mode=mode, loss=total_loss, train_op=train_op, '''host_call=host_call,'''
             scaffold_fn=scaffold_fn)
       train_spec.cache = new_cache
 
@@ -300,6 +301,7 @@ def main(unused_argv):
   train_steps = train_record_info_dict["num_batch"]
   valid_steps = valid_record_info_dict["num_batch"]
   FLAGS.train_steps = train_steps
+  FLAGS.save_steps = train_steps*FLAGS.epochs
 
   tf.logging.info("num of batches {}".format(
       train_record_info_dict["num_batch"]))
@@ -315,8 +317,8 @@ def main(unused_argv):
           "d_model": FLAGS.d_model, 
           "n_heads": FLAGS.n_head
   }
-  _dir = get_logdir(os.path.join(FLAGS.bucket_uri, FLAGS.logDir), info_dict)
-  model_fn = get_model_fn(_dir)
+  #_dir = get_logdir(os.path.join(FLAGS.bucket_uri, FLAGS.logDir), info_dict)
+  model_fn = get_model_fn(""'''_dir''')
 
   ##### Create TPUEstimator
   # TPU Configuration
