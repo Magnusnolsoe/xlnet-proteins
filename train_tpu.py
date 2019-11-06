@@ -208,7 +208,7 @@ def get_model_fn(logdir):
       '''
       #### Constucting training TPUEstimatorSpec with new cache.
       train_spec = tf.contrib.tpu.TPUEstimatorSpec(
-            mode=mode, loss=total_loss, train_op=train_op, scaffold_fn=scaffold_fn) '''host_call=host_call,'''
+            mode=mode, loss=total_loss, train_op=train_op, scaffold_fn=scaffold_fn)
       train_spec.cache = new_cache
 
       return train_spec
