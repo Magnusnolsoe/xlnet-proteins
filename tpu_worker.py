@@ -30,7 +30,7 @@ flags.DEFINE_string("seq_len", default="",
 NUM_HOSTS = 1
 NUM_CORES = 8
 EPOCHS = 50
-FAIL_THRESHOLD = 10
+FAIL_THRESHOLD = 3
 ITERATIONS = 50000
 
 TPU_ZONES = {
@@ -88,7 +88,10 @@ def generate_param_config(dirname, suggestion_id, params):
 
     seq_len = int(FLAGS.seq_len)
     reuse_len = seq_len // 2
-    n_pred = int(round(0.15*seq_len))
+    if seq_len == 512:
+        n_pred = 85
+    else:
+        n_pred = int(round(0.15*seq_len))
     record_info_dir = get_record_info_dir(reuse_len, n_pred, batch_size)
     tpu_zone = TPU_ZONES[FLAGS.tpu_name]
 
