@@ -43,7 +43,16 @@ TPU_ZONES = {
     'v2-3': "us-central1-f",
     'v2-4': "us-central1-f",
     'v2-5': "us-central1-f",
-    'preempt-1': "us-central1-f"
+    'preempt-1': "us-central1-f",
+    'preempt-2': "us-central1-f",
+    'preempt-3': "us-central1-f",
+    'preempt-4': "us-central1-f",
+    'preempt-5': "us-central1-f",
+    'preempt-6': "us-central1-f",
+    'preempt-7': "us-central1-f",
+    'preempt-8': "us-central1-f",
+    'preempt-9': "us-central1-f",
+    'preempt-10': "us-central1-f"
 }
 
 
