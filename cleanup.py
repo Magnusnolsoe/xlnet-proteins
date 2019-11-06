@@ -31,10 +31,10 @@ def main(_):
 
     if FLAGS.total:
         suggestions = conn.experiments(FLAGS.experiment_id).suggestions().fetch(state="open")
-        for sugg in suggestions.iterate_pages():
+        for suggestion in suggestions.iterate_pages():
 
-            model_dir = os.path.join(FLAGS.bucket_name, "models", suggestion_id)
-            param_config_file = os.path.join(FLAGS.bucket_name, "param_configs", "{}.json".format(suggestion_id))
+            model_dir = os.path.join(FLAGS.bucket_name, "models", suggestion.id)
+            param_config_file = os.path.join(FLAGS.bucket_name, "param_configs", "{}.json".format(suggestion.id))
             tf.gfile.DeleteRecursively(model_dir)
             tf.gfile.Remove(param_config_file)
         
