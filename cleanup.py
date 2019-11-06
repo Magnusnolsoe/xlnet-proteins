@@ -9,6 +9,8 @@ flags.DEFINE_string("experiment_id", default="default",
       help="Experiment id")
 flags.DEFINE_string("bucket_name", default="",
         help="Name of gcp bucket")
+flags.DEFINE_bool("total", default=False,
+        help="Total cleanup or not")
 
 def main(_):
     
@@ -22,10 +24,25 @@ def main(_):
         model_dir = os.path.join(FLAGS.bucket_name, "models", suggestion_id)
         param_config_file = os.path.join(FLAGS.bucket_name, "param_configs", "{}.json".format(suggestion_id))
 
-        tf.gfile.DeleteRecursively(model_dir)
-        tf.gfile.Remove(param_config_file)
+        if tf.io.gfile.exists(model_dir):
+            tf.gfile.DeleteRecursively(model_dir)
+        if tf.io.gfile.exists(param_config_file):
+            tf.gfile.Remove(param_config_file)
 
     conn.experiments(FLAGS.experiment_id).observations().delete(state="failed")
+
+    if FLAGS.total:
+        suggestions = conn.experiments(FLAGS.experiment_id).suggestions().fetch(state="open")
+        for suggestion in suggestions.iterate_pages():
+
+            model_dir = os.path.join(FLAGS.bucket_name, "models", suggestion.id)
+            param_config_file = os.path.join(FLAGS.bucket_name, "param_configs", "{}.json".format(suggestion.id))
+            if tf.io.gfile.exists(model_dir):
+                tf.gfile.DeleteRecursively(model_dir)
+            if tf.io.gfile.exists(param_config_file):
+                tf.gfile.Remove(param_config_file)
+        
+        conn.experiments(FLAGS.experiment_id).suggestions().delete(state="open")
 
 
 if __name__ == '__main__':
