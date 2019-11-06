@@ -15,15 +15,17 @@ def main(_):
     conn = Connection(client_token=FLAGS.api_token)
 
 
-    suggestions = conn.experiments(FLAGS.experiment_id).suggestions().fetch(state="failed")
-    for suggestion in suggestions:
-        model_dir = os.path.join(FLAGS.bucket_name, "models", suggestion.id)
-        param_config_file = os.path.join(FLAGS.bucket_name, "param_configs", "{}.json".format(suggestion.id))
+    observations = conn.experiments(FLAGS.experiment_id).observations().fetch(state="failed")
+    for obs in observations.iterate_pages():
+        suggestion_id = str(obs.suggestion)
+
+        model_dir = os.path.join(FLAGS.bucket_name, "models", suggestion_id)
+        param_config_file = os.path.join(FLAGS.bucket_name, "param_configs", "{}.json".format(suggestion_id))
 
         tf.gfile.DeleteRecursively(model_dir)
         tf.gfile.Remove(param_config_file)
 
-    conn.experiments(FLAGS.experiment_id).suggestions().delete(state="failed")
+    conn.experiments(FLAGS.experiment_id).observations().delete(state="failed")
 
 
 if __name__ == '__main__':
