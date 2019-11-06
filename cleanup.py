@@ -24,9 +24,9 @@ def main(_):
         model_dir = os.path.join(FLAGS.bucket_name, "models", suggestion_id)
         param_config_file = os.path.join(FLAGS.bucket_name, "param_configs", "{}.json".format(suggestion_id))
 
-        if tf.gfile.exists(model_dir):
+        if tf.io.gfile.exists(model_dir):
             tf.gfile.DeleteRecursively(model_dir)
-        if tf.gfile.exists(param_config_file):
+        if tf.io.gfile.exists(param_config_file):
             tf.gfile.Remove(param_config_file)
 
     conn.experiments(FLAGS.experiment_id).observations().delete(state="failed")
@@ -37,9 +37,9 @@ def main(_):
 
             model_dir = os.path.join(FLAGS.bucket_name, "models", suggestion.id)
             param_config_file = os.path.join(FLAGS.bucket_name, "param_configs", "{}.json".format(suggestion.id))
-            if tf.gfile.exists(model_dir):
+            if tf.io.gfile.exists(model_dir):
                 tf.gfile.DeleteRecursively(model_dir)
-            if tf.gfile.exists(param_config_file):
+            if tf.io.gfile.exists(param_config_file):
                 tf.gfile.Remove(param_config_file)
         
         conn.experiments(FLAGS.experiment_id).suggestions().delete(state="open")
