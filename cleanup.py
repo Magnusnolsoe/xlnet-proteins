@@ -1,5 +1,5 @@
 import os
-import sigopt
+from sigopt import Connection
 import tensorflow as tf
 from absl import flags, app
 
