@@ -22,8 +22,6 @@ flags.DEFINE_string("bucket_name", default="",
 # TPU parameters
 flags.DEFINE_string("tpu_name", default="",
         help="TPU name")
-flags.DEFINE_string("seq_len", default="",
-        help="Sequence length")
 
 # Internal Configurations
 NUM_HOSTS = 1
@@ -65,9 +63,9 @@ def generate_model_dir(dirname):
 
     return model_dir_basename
 
-def get_record_info_dir(reuse_len, n_pred, bsz):
+def get_record_info_dir(seq_len, reuse_len, n_pred, bsz):
 
-    basename = "seq_len{}-reuse_len{}-n_pred{}-bsz{}".format(FLAGS.seq_len, reuse_len, n_pred, bsz)
+    basename = "seq_len{}-reuse_len{}-n_pred{}-bsz{}".format(seq_len, reuse_len, n_pred, bsz)
 
     return os.path.join("proc_data", basename)
 
@@ -76,8 +74,10 @@ def generate_param_config(dirname, suggestion_id, params):
     log_info = {"id": suggestion_id}
 
     # Suggestions from SigOpt
+    seq_len = int(params['seq_len'])
+    reuse_len = seq_len // 2
     mem_len = params['mem_len']*10
-    perm_size = params['perm_size']
+    perm_size = int((params['perm_size']/10) * reuse_len)
     n_layer = params['n_layer']
     d_model = pow(2,params['d_model'])
     d_embed = pow(2,params['d_embed'])
@@ -94,13 +94,11 @@ def generate_param_config(dirname, suggestion_id, params):
     else:
         weight_decay = pow(10, params['weight_decay'])
 
-    seq_len = int(FLAGS.seq_len)
-    reuse_len = seq_len // 2
     if seq_len == 512:
         n_pred = 85
     else:
         n_pred = int(round(0.15*seq_len))
-    record_info_dir = get_record_info_dir(reuse_len, n_pred, batch_size)
+    record_info_dir = get_record_info_dir(seq_len, reuse_len, n_pred, batch_size)
     tpu_zone = TPU_ZONES[FLAGS.tpu_name]
 
     configs = {"master": None, "tpu": FLAGS.tpu_name, "gcp_project": FLAGS.gcp_project,

@@ -13,33 +13,27 @@ flags.DEFINE_integer("num_workers", default=1,
       help="SigOpt parallel bandwidth")
 flags.DEFINE_string("api_token", default="",
       help="SigOpt api token")
-flags.DEFINE_integer("seq_len", default=0,
-      help="Sequence length")
-
+      
 def main(unused_args):
     del unused_args
     
     conn = Connection(client_token=FLAGS.api_token)
 
-    batches = {
-        128: ['64', '32', '16', '8'],
-        256: ['32', '16', '8'],
-        512: ['16', '8']
-    }
     experiment = conn.experiments().create(
         name=FLAGS.exp_name,
         project=FLAGS.project_id,
         metrics=[dict(name='pplx', objective='minimize')],
         parameters=[
                 dict(name='mem_len', type='int', bounds=dict(min=0,max=50)),        # Multiply
-                dict(name='perm_size', type='int', bounds=dict(min=1,max=FLAGS.seq_len//2)),
+                dict(name='perm_size', type='int', bounds=dict(min=1,max=10)),
                 dict(name='n_layer', type='int', bounds=dict(min=1,max=6)),
                 dict(name='d_model', type='int', bounds=dict(min=5,max=8)),         # Multiply
                 dict(name='d_embed', type='int', bounds=dict(min=5,max=8)),         # Multiply
                 dict(name='n_head', type='int', bounds=dict(min=1,max=4)),
                 dict(name='d_head', type='int', bounds=dict(min=1,max=4)),          # Multiply
                 dict(name='d_inner', type='int', bounds=dict(min=6,max=10)),        # Multiply
-                dict(name='batch_size', type='categorical', categorical_values=batches[FLAGS.seq_len]),
+                dict(name='seq_len', type='categorical', categorical_values=['128', '256', '512']),
+                dict(name='batch_size', type='categorical', categorical_values=['64', '32', '16', '8']),
                 dict(name='learning_rate', type='double', bounds=dict(min=1e-6, max=1e-2)),
                 dict(name='dropout', type='int', bounds=dict(min=0,max=9)),         # Multiply
                 dict(name='dropatt', type='int', bounds=dict(min=0,max=9)),         # Multiply
