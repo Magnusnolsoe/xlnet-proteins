@@ -169,7 +169,12 @@ def run_worker(unused_args):
     didIFail = False
     while experiment.progress.observation_count < experiment.observation_budget:
 
-        suggestion = conn.experiments(experiment.id).suggestions().create()
+        suggestion = conn.experiments(experiment.id).suggestions().create(
+            metadata=dict(
+                host_name = FLAGS.gcp_project,
+                tpu_name = FLAGS.tpu_name,
+            )
+        )
 
         # create model_dir and param config file
         model_dir_basename = generate_model_dir(suggestion.id)
@@ -208,7 +213,16 @@ def run_worker(unused_args):
             observation = conn.experiments(experiment.id).observations().create(
                 suggestion=suggestion.id,
                 value=float(results['pplx']),
-                metadata=dict(avg_train_time=results['avg_train_time'], avg_eval_time=results['avg_eval_time'], stopped_early=results['stopped_early'], last_errors=results['last_errors'], slope=results['slope'], epoch=results['epoch'])
+                metadata=dict(
+                    avg_train_time=results['avg_train_time'], 
+                    avg_eval_time=results['avg_eval_time'], 
+                    stopped_early=results['stopped_early'], 
+                    last_errors=results['last_errors'], 
+                    slope=results['slope'], 
+                    epoch=results['epoch'],
+                    host_name = FLAGS.gcp_project,
+                    tpu_name = FLAGS.tpu_name,
+                )
             )
 
             # Update the experiment object
