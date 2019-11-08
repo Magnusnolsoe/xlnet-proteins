@@ -219,6 +219,7 @@ def run_worker(unused_args):
                     host_name = FLAGS.gcp_project,
                     tpu_name = FLAGS.tpu_name,
                 )
+            )
 
             # Update the experiment object
             experiment = conn.experiments(experiment.id).fetch()
