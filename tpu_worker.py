@@ -172,8 +172,8 @@ def run_worker(unused_args):
 
         suggestion = conn.experiments(experiment.id).suggestions().create(
             metadata=dict(
-                "host-name": FLAGS.gcp_project,
-                "tpu_name": FLAGS.tpu_name,
+                host_name=FLAGS.gcp_project,
+                tpu_name=FLAGS.tpu_name,
             )
         )
 
