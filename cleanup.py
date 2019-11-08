@@ -29,6 +29,7 @@ def main(_):
         if tf.io.gfile.exists(param_config_file):
             tf.gfile.Remove(param_config_file)
 
+    conn.experiments(FLAGS.experiment_id).suggestions().delete(state="failed")
     conn.experiments(FLAGS.experiment_id).observations().delete(state="failed")
 
     if FLAGS.total:
