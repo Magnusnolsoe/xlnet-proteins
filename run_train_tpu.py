@@ -1,6 +1,7 @@
 import os
 import json
 from absl import flags, app
+import tensorflow as tf
 
 flags.DEFINE_string('config', default=None,
       help='Parameter config file')
