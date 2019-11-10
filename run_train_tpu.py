@@ -9,7 +9,7 @@ FLAGS = flags.FLAGS
 
 def main(_):
     
-    with open(FLAGS.config, 'r') as config_file:
+    with tf.gfile.Open(FLAGS.config, 'r') as config_file:
         params = json.load(config_file)
         
         # train_batch_size should be equal to the bsz_per_host used in preprocessing
