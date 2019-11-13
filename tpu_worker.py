@@ -77,7 +77,7 @@ def generate_param_config(dirname, suggestion_id, params):
     seq_len = int(params['seq_len'])
     reuse_len = seq_len // 2
     mem_len = params['mem_len']*10
-    perm_size = reuse_len / int(params['perm_size'])
+    perm_size = int(reuse_len / int(params['perm_size']))
     n_layer = params['n_layer']
     d_model = pow(2,params['d_model'])
     d_embed = pow(2,params['d_embed'])
