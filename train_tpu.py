@@ -163,7 +163,7 @@ def get_model_fn(logdir):
     #### Training or Evaluation
     is_training = (mode == tf.estimator.ModeKeys.TRAIN)
     #assert is_training
-    #assert tf.gfile.Exists(logdir)
+    assert tf.gfile.Exists(logdir)
 
     #### Retrieve `mems` from `params["cache"]`
     mems = {}
@@ -199,16 +199,16 @@ def get_model_fn(logdir):
       monitor_dict['pplx'] = tf.math.exp(total_loss)
       
       #### Creating host calls
-      '''
       host_call = function_builder.construct_scalar_host_call(
             monitor_dict=monitor_dict,
             log_dir=logdir,
             prefix="train/",
             reduce_fn=tf.reduce_mean)
-      '''
+
       #### Constucting training TPUEstimatorSpec with new cache.
       train_spec = tf.contrib.tpu.TPUEstimatorSpec(
-            mode=mode, loss=total_loss, train_op=train_op, scaffold_fn=scaffold_fn)
+            mode=mode, loss=total_loss, train_op=train_op, host_call=host_call,
+            scaffold_fn=scaffold_fn)
       train_spec.cache = new_cache
 
       return train_spec
@@ -316,9 +316,9 @@ def main(unused_argv):
           "d_model": FLAGS.d_model, 
           "n_heads": FLAGS.n_head
   }
-  #_dir = get_logdir(os.path.join(FLAGS.bucket_uri, FLAGS.logDir), info_dict)
-  #model_fn = get_model_fn(_dir)
-  model_fn = get_model_fn("")
+  _dir = get_logdir(os.path.join(FLAGS.bucket_uri, FLAGS.logDir), info_dict)
+  model_fn = get_model_fn(_dir)
+  #model_fn = get_model_fn("")
 
   ##### Create TPUEstimator
   # TPU Configuration
