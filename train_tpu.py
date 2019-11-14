@@ -154,7 +154,7 @@ FLAGS = flags.FLAGS
 
 # Internal configuration
 PATIENCE = 5 # Early stopping patience
-ROUNDING_PRECISION = 3 # precision of error when doing early stopping
+ROUNDING_PRECISION = 6 # precision of error when doing early stopping
 
 def get_model_fn(logdir):
   """doc."""
@@ -368,12 +368,14 @@ def main(unused_argv):
   
   best_loss = min(eval_errs)
   best_pplx = np.exp(best_loss)
+  std = np.std(list(map(np.exp, eval_errs)))
   if last_errs is None:
         last_errs = []
         slope = 0
   result = {
         'loss': str(best_loss),
         'pplx': str(best_pplx),
+        'std': str(std),
         'avg_train_time': str(np.mean(train_times)),
         'avg_eval_time': str(np.mean(eval_times)),
         'stopped_early': str(stopped_early),

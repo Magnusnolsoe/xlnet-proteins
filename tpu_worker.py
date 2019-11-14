@@ -84,8 +84,9 @@ def generate_param_config(dirname, suggestion_id, params):
     n_head = params['n_head']
     d_head = pow(2,params['d_head'])
     d_inner = pow(2,params['d_inner'])
-    batch_size = int(params['batch_size'])
-    lr_rate = params['learning_rate']
+    batch_size = 64
+    lr_rate = pow(10, -params['learning_rate'])
+    d_method = params['decay_method']
     dropout = params['dropout']/10
     dropatt = params['dropatt']/10
     warmup_steps = params['warmup_steps']*100
@@ -107,7 +108,7 @@ def generate_param_config(dirname, suggestion_id, params):
                  "run_id": suggestion_id, "num_passes": None, "record_info_dir": record_info_dir, "model_dir": dirname,
                  "init_checkpoint": None, "logDir": 'logging', "learning_rate": lr_rate, "clip": None,
                  "min_lr_ratio": None, "warmup_steps": warmup_steps, "adam_epsilon": None,
-                 "decay_method": 'poly', "weight_decay": weight_decay, "batch_size": batch_size,
+                 "decay_method": d_method, "weight_decay": weight_decay, "batch_size": batch_size,
                  "train_steps": None, "iterations": ITERATIONS, "save_steps": None, "max_save": None,
                  "seq_len": seq_len, "reuse_len": reuse_len, "perm_size": perm_size, 
                  "bi_data": False, "mask_alpha": 6, "mask_beta": 1, "num_predict": n_pred, "n_token": VOCAB_SIZE,
