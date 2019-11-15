@@ -33,7 +33,7 @@ def main(unused_args):
                 dict(name='d_head', type='int', bounds=dict(min=1,max=6)),          # Multiply
                 dict(name='d_inner', type='int', bounds=dict(min=6,max=11)),        # Multiply
                 dict(name='seq_len', type='categorical', categorical_values=['32', '64', '128', '256', '512']),
-                dict(name='learning_rate', type='int', bounds=dict(min=4, max=10)), # Multiply
+                dict(name='learning_rate', type='double', bounds=dict(min=1e-8, max=1e-4)), # Multiply
                 dict(name='decay_method', type='categorical', categorical_values=['poly', 'cos']),
                 dict(name='dropout', type='int', bounds=dict(min=0,max=5)),         # Multiply
                 dict(name='dropatt', type='int', bounds=dict(min=0,max=5)),         # Multiply

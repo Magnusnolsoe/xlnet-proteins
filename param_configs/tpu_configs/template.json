@@ -48,7 +48,7 @@
 	"dropatt": 0.0,
 	"untie_r": true,
 	"summary_type": "last/first/mean/attn",
-	"ff_activation": "relu",
+	"ff_activation": "relu/gelu",
 	"use_bfloat16": true,
 	"init": "normal/uniform",
 	"init_std": 0.0,

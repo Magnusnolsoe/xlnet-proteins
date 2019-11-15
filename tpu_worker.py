@@ -28,7 +28,7 @@ NUM_HOSTS = 1
 NUM_CORES = 8
 EPOCHS = 50
 FAIL_THRESHOLD = 3
-ITERATIONS = 50000
+ITERATIONS = 10000
 
 TPU_ZONES = {
     'instance-1': "us-central1-a",
@@ -85,7 +85,7 @@ def generate_param_config(dirname, suggestion_id, params):
     d_head = pow(2,params['d_head'])
     d_inner = pow(2,params['d_inner'])
     batch_size = 64
-    lr_rate = pow(10, -params['learning_rate'])
+    lr_rate = params['learning_rate']
     d_method = params['decay_method']
     dropout = params['dropout']/10
     dropatt = params['dropatt']/10
@@ -191,10 +191,13 @@ def run_worker(unused_args):
         if start_tpu(config_path): # Only enters if failed
             observation = conn.experiments(experiment.id).observations().create(
                 failed = True,
-                suggestion=suggestion.id
+                suggestion=suggestion.id,
+                metadata=dict(
+                    host_name = FLAGS.gcp_project,
+                    tpu_name = FLAGS.tpu_name
+                )
             )
             fail_count += 1
-            tf.logging.info("Failed with observation: {}, fail_count: {}".format(observation, fail_count))
             if fail_count >= FAIL_THRESHOLD: # Stop worker if failed FAIL_THRESHOLD or more times
                 with tf.gfile.Open(worker_state_path, 'w') as f:
                     json.dump({"state": 'FAILED'}, f)
