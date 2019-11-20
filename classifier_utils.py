@@ -4,14 +4,12 @@ import re
 import numpy as np
 
 import tensorflow as tf
-from data_utils import SEP_ID, CLS_ID
+from data_utils import EOP_ID
 
 FLAGS = flags.FLAGS
 
-SEG_ID_A   = 0
-SEG_ID_B   = 1
-SEG_ID_CLS = 2
-SEG_ID_SEP = 3
+SEG_ID     = 0
+SEG_ID_EOP = 1
 SEG_ID_PAD = 4
 
 class PaddingInputExample(object):
@@ -41,23 +39,6 @@ class InputFeatures(object):
     self.is_real_example = is_real_example
 
 
-def _truncate_seq_pair(tokens_a, tokens_b, max_length):
-  """Truncates a sequence pair in place to the maximum length."""
-
-  # This is a simple heuristic which will always truncate the longer sequence
-  # one token at a time. This makes more sense than truncating an equal percent
-  # of tokens from each, since if one sequence is very short then each token
-  # that's truncated likely contains more information than a longer sequence.
-  while True:
-    total_length = len(tokens_a) + len(tokens_b)
-    if total_length <= max_length:
-      break
-    if len(tokens_a) > len(tokens_b):
-      tokens_a.pop()
-    else:
-      tokens_b.pop()
-
-
 def convert_single_example(ex_index, example, label_list, max_seq_length,
                               tokenize_fn):
   """Converts a single `InputExample` into a single `InputFeatures`."""
@@ -75,38 +56,10 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     for (i, label) in enumerate(label_list):
       label_map[label] = i
 
-  tokens_a = tokenize_fn(example.text_a)
-  tokens_b = None
-  if example.text_b:
-    tokens_b = tokenize_fn(example.text_b)
-
-  if tokens_b:
-    # Modifies `tokens_a` and `tokens_b` in place so that the total
-    # length is less than the specified length.
-    # Account for two [SEP] & one [CLS] with "- 3"
-    _truncate_seq_pair(tokens_a, tokens_b, max_seq_length - 3)
-  else:
-    # Account for one [SEP] & one [CLS] with "- 2"
-    if len(tokens_a) > max_seq_length - 2:
-      tokens_a = tokens_a[:max_seq_length - 2]
-
-  tokens = []
-  segment_ids = []
-  for token in tokens_a:
-    tokens.append(token)
-    segment_ids.append(SEG_ID_A)
-  tokens.append(SEP_ID)
-  segment_ids.append(SEG_ID_A)
-
-  if tokens_b:
-    for token in tokens_b:
-      tokens.append(token)
-      segment_ids.append(SEG_ID_B)
-    tokens.append(SEP_ID)
-    segment_ids.append(SEG_ID_B)
-
-  tokens.append(CLS_ID)
-  segment_ids.append(SEG_ID_CLS)
+  tokens = tokenize_fn(example.text)
+  segment_ids = [SEG_ID] * len(tokens)
+  tokens.append(EOP_ID)
+  segment_ids.append(SEG_ID_EOP)
 
   input_ids = tokens
 
