@@ -248,9 +248,9 @@ def file_based_convert_examples_to_features(
       tf.logging.info("Writing example {} of {}".format(ex_index,
                                                         len(examples)))
 
-    feature = convert_single_example(ex_index, example, label_list,
+    feature_list = convert_single_example(ex_index, example, label_list,
                                      max_seq_length, tokenize_fn)
-
+    
     def create_int_feature(values):
       f = tf.train.Feature(int64_list=tf.train.Int64List(value=list(values)))
       return f
@@ -259,19 +259,22 @@ def file_based_convert_examples_to_features(
       f = tf.train.Feature(float_list=tf.train.FloatList(value=list(values)))
       return f
 
-    features = collections.OrderedDict()
-    features["input_ids"] = create_int_feature(feature.input_ids)
-    features["input_mask"] = create_float_feature(feature.input_mask)
-    features["segment_ids"] = create_int_feature(feature.segment_ids)
-    if label_list is not None:
-      features["label_ids"] = create_int_feature([feature.label_id])
-    else:
-      features["label_ids"] = create_float_feature([float(feature.label_id)])
-    features["is_real_example"] = create_int_feature(
-        [int(feature.is_real_example)])
+    for feature in feature_list:
+      features = collections.OrderedDict()
+      features["input_ids"] = create_int_feature(feature.input_ids)
+      features["input_mask"] = create_float_feature(feature.input_mask)
+      features["segment_ids"] = create_int_feature(feature.segment_ids)
+      if label_list is not None:
+        features["label_ids"] = create_int_feature([feature.label_id])
+      else:
+        features["label_ids"] = create_float_feature([float(feature.label_id)])
+      features["is_eop"] = create_int_feature(
+          [int(feature.is_eop)])
+      features["is_real_example"] = create_int_feature(
+          [int(feature.is_real_example)])
 
-    tf_example = tf.train.Example(features=tf.train.Features(feature=features))
-    writer.write(tf_example.SerializeToString())
+      tf_example = tf.train.Example(features=tf.train.Features(feature=features))
+      writer.write(tf_example.SerializeToString())
   writer.close()
 
 

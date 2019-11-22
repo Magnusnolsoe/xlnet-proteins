@@ -2,6 +2,7 @@ from absl import flags
 
 import re
 import numpy as np
+import collections
 
 import tensorflow as tf
 from data_utils import EOP_ID
@@ -31,17 +32,19 @@ class InputFeatures(object):
                input_mask,
                segment_ids,
                label_id,
+               is_eop,
                is_real_example=True):
     self.input_ids = input_ids
     self.input_mask = input_mask
     self.segment_ids = segment_ids
     self.label_id = label_id
-    self.is_real_example = is_real_example
+    self.is_eop = is_eop
+    self.is_real_example = is_real_example  
 
 
 def convert_single_example(ex_index, example, label_list, max_seq_length,
                               tokenize_fn):
-  """Converts a single `InputExample` into a single `InputFeatures`."""
+  """Converts a single `InputExample` into a list of `InputFeatures`."""
 
   if isinstance(example, PaddingInputExample):
     return InputFeatures(
@@ -56,46 +59,88 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     for (i, label) in enumerate(label_list):
       label_map[label] = i
 
-  tokens = tokenize_fn(example.text)
-  segment_ids = [SEG_ID] * len(tokens)
-  tokens.append(EOP_ID)
-  segment_ids.append(SEG_ID_EOP)
+  
+  tokenized = tokenize_fn(example.text)
+  protein_len = len(tokenized)
 
-  input_ids = tokens
+  assert protein_len > 0
 
-  # The mask has 0 for real tokens and 1 for padding tokens. Only real
-  # tokens are attended to.
-  input_mask = [0] * len(input_ids)
+  prot_is_divisable = protein_len % max_seq_length == 0 
 
-  # Zero-pad up to the sequence length.
-  if len(input_ids) < max_seq_length:
-    delta_len = max_seq_length - len(input_ids)
-    input_ids = [0] * delta_len + input_ids
-    input_mask = [1] * delta_len + input_mask
-    segment_ids = [SEG_ID_PAD] * delta_len + segment_ids
+  # Segment protein 
+   _ProtSpan = collections.namedtuple(
+                    "ProtSpan", ["start", "length"])
+  prot_spans = []
+  start_offset = 0
+  while start_offset < protein_len:
+    length = min(max_seq_length, protein_len-start_offset)
+    prot_spans.append(_ProtSpan(start=start_offset, length=length))
+    start_offset += length + 1
+  
+  if prot_is_divisable:
+    prot_spans.append(_ProtSpan(start=protein_len, length=1))
 
-  assert len(input_ids) == max_seq_length
-  assert len(input_mask) == max_seq_length
-  assert len(segment_ids) == max_seq_length
+  features = []
+  for (prot_span_index, prot_span) in enumerate(prot_spans):
 
-  if label_list is not None:
-    label_id = label_map[example.label]
-  else:
-    label_id = example.label
-  if ex_index < 5:
-    tf.logging.info("*** Example ***")
-    tf.logging.info("guid: %s" % (example.guid))
-    tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
-    tf.logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
-    tf.logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
-    tf.logging.info("label: {} (id = {})".format(example.label, label_id))
+    start = prot_span.start
+    end = prot_span.start + prot_span.length
+    if prot_is_divisable:
+      is_eop = prot_span.start + prot_span.length > protein_len
+    else:
+      is_eop = prot_span.start + prot_span.length == protein_len
 
-  feature = InputFeatures(
-      input_ids=input_ids,
-      input_mask=input_mask,
-      segment_ids=segment_ids,
-      label_id=label_id)
-  return feature
+    if prot_is_divisable and is_eop:
+      tokens = []
+      segment_ids = []
+    else:
+      tokens = tokenized[start : end]
+      segment_ids = [SEG_ID] * prot_span.length
+      
+    if is_eop:
+      tokens.append(EOP_ID)
+      segment_ids.append(SEG_ID_EOP)
+
+
+    input_ids = tokens
+
+    # The mask has 0 for real tokens and 1 for padding tokens. Only real
+    # tokens are attended to.
+    input_mask = [0] * len(input_ids)
+
+    # Zero-pad up to the sequence length.
+    if len(input_ids) < max_seq_length:
+      delta_len = max_seq_length - len(input_ids)
+      input_ids = [0] * delta_len + input_ids
+      input_mask = [1] * delta_len + input_mask
+      segment_ids = [SEG_ID_PAD] * delta_len + segment_ids
+
+    assert len(input_ids) == max_seq_length
+    assert len(input_mask) == max_seq_length
+    assert len(segment_ids) == max_seq_length
+
+    if label_list is not None:
+      label_id = label_map[example.label]
+    else:
+      label_id = example.label
+    if ex_index < 5:
+      tf.logging.info("*** Example ***")
+      tf.logging.info("guid: %s" % (example.guid))
+      tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
+      tf.logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
+      tf.logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
+      tf.logging.info("label: {} (id = {})".format(example.label, label_id))
+
+    feature = InputFeatures(
+        input_ids=input_ids,
+        input_mask=input_mask,
+        segment_ids=segment_ids,
+        is_eop=is_eop,
+        label_id=label_id)
+    
+    features.append(feature)
+  
+  return features
 
 
 
