@@ -76,7 +76,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   while start_offset < protein_len:
     length = min(max_seq_length, protein_len-start_offset)
     prot_spans.append(_ProtSpan(start=start_offset, length=length))
-    start_offset += length + 1
+    start_offset += length
   
   if prot_is_divisable:
     prot_spans.append(_ProtSpan(start=protein_len, length=1))
@@ -112,9 +112,9 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     # Zero-pad up to the sequence length.
     if len(input_ids) < max_seq_length:
       delta_len = max_seq_length - len(input_ids)
-      input_ids = [0] * delta_len + input_ids
-      input_mask = [1] * delta_len + input_mask
-      segment_ids = [SEG_ID_PAD] * delta_len + segment_ids
+      input_ids = input_ids + [0] * delta_len
+      input_mask = input_mask + [1] * delta_len
+      segment_ids = segment_ids + [SEG_ID_PAD] * delta_len
 
     assert len(input_ids) == max_seq_length
     assert len(input_mask) == max_seq_length
