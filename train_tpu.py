@@ -154,7 +154,7 @@ FLAGS = flags.FLAGS
 
 # Internal configuration
 PATIENCE = 5 # Early stopping patience
-ROUNDING_PRECISION = 5 # precision of error when doing early stopping
+ROUNDING_PRECISION = 3 # precision of error when doing early stopping
 
 def get_model_fn(logdir):
   """doc."""
