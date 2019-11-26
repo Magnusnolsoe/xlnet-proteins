@@ -157,6 +157,7 @@ def get_classification_loss(
   seg_id = tf.transpose(features["segment_ids"], [1, 0])
   inp_mask = tf.transpose(features["input_mask"], [1, 0])
   label = tf.reshape(features["label_ids"], [bsz_per_core])
+  is_eop = features["is_eop"]
 
   xlnet_config = xlnet.XLNetConfig(json_path=FLAGS.model_config_path)
   run_config = xlnet.create_run_config(is_training, True, FLAGS)
@@ -185,7 +186,7 @@ def get_classification_loss(
         scope=cls_scope,
         return_logits=True)
 
-    total_loss = tf.reduce_mean(per_example_loss)
+    total_loss = tf.reduce_mean(per_example_loss)*is_eop
 
     return total_loss, per_example_loss, logits
 
