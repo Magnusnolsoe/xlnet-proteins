@@ -52,6 +52,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
         input_mask=[1] * max_seq_length,
         segment_ids=[0] * max_seq_length,
         label_id=0,
+        is_eop=False,
         is_real_example=False)
 
   if label_list is not None:
@@ -129,6 +130,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
       tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
       tf.logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
       tf.logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
+      tf.logging.info("is_eop: {}".format(is_eop))
       tf.logging.info("label: {} (id = {})".format(example.label, label_id))
 
     feature = InputFeatures(
