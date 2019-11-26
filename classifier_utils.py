@@ -69,7 +69,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   prot_is_divisable = protein_len % max_seq_length == 0 
 
   # Segment protein 
-   _ProtSpan = collections.namedtuple(
+  _ProtSpan = collections.namedtuple(
                     "ProtSpan", ["start", "length"])
   prot_spans = []
   start_offset = 0
