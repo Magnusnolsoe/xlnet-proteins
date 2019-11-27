@@ -59,8 +59,6 @@ flags.DEFINE_string("init_checkpoint", default=None,
       "Could be a pretrained model or a finetuned model.")
 flags.DEFINE_string("output_dir", default="",
       help="Output dir for TF records.")
-flags.DEFINE_string("spiece_model_file", default="",
-      help="Sentence Piece model path.")
 flags.DEFINE_string("model_dir", default="",
       help="Directory for saving the finetuned model.")
 flags.DEFINE_string("data_dir", default="",
@@ -128,8 +126,6 @@ flags.DEFINE_integer("shuffle_buffer", default=2048,
 flags.DEFINE_integer("num_passes", default=1,
       help="Num passes for processing training data. "
       "This is use to batch data without loss for TPUs.")
-flags.DEFINE_bool("uncased", default=False,
-      help="Use uncased.")
 flags.DEFINE_string("cls_scope", default=None,
       help="Classifier layer scope.")
 flags.DEFINE_bool("is_regression", default=False,
