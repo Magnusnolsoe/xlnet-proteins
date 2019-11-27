@@ -328,7 +328,7 @@ def file_based_input_fn_builder(input_file, seq_length, is_training,
     # For training, we want a lot of parallel reading and shuffling.
     # For eval, we want no shuffling and parallel reading doesn't matter.
     if is_training:
-      d = d.shuffle(buffer_size=FLAGS.shuffle_buffer)
+      #d = d.shuffle(buffer_size=FLAGS.shuffle_buffer)
       d = d.repeat()
 
     d = d.apply(
@@ -367,16 +367,19 @@ def get_model_fn(n_class):
     if mode == tf.estimator.ModeKeys.EVAL:
       assert FLAGS.num_hosts == 1
 
-      def metric_fn(per_example_loss, label_ids, logits, is_real_example):
+      def metric_fn(per_example_loss, label_ids, logits, is_real_example, is_eop):
         predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
+
+        weights = tf.math.minimum(is_real_example, is_eop)
+
         eval_input_dict = {
             'labels': label_ids,
             'predictions': predictions,
-            'weights': is_real_example
+            'weights': weights
         }
         accuracy = tf.metrics.accuracy(**eval_input_dict)
 
-        loss = tf.metrics.mean(values=per_example_loss, weights=is_real_example)
+        loss = tf.metrics.mean(values=per_example_loss, weights=weights)
         return {
             'eval_accuracy': accuracy,
             'eval_loss': loss}
@@ -389,6 +392,7 @@ def get_model_fn(n_class):
         return {'eval_loss': loss, 'eval_pearsonr': pearsonr}
 
       is_real_example = tf.cast(features["is_real_example"], dtype=tf.float32)
+      is_eop = tf.cast(features["is_eop"], dtype=tf.float32)
 
       #### Constucting evaluation TPUEstimatorSpec with new cache.
       label_ids = tf.reshape(features['label_ids'], [-1])
@@ -397,7 +401,7 @@ def get_model_fn(n_class):
         metric_fn = regression_metric_fn
       else:
         metric_fn = metric_fn
-      metric_args = [per_example_loss, label_ids, logits, is_real_example]
+      metric_args = [per_example_loss, label_ids, logits, is_real_example, is_eop]
 
       if FLAGS.use_tpu:
         eval_spec = tf.contrib.tpu.TPUEstimatorSpec(
@@ -449,7 +453,7 @@ def get_model_fn(n_class):
 
         host_call = function_builder.construct_scalar_host_call(
             monitor_dict=monitor_dict,
-            model_dir=FLAGS.model_dir,
+            log_dir=FLAGS.model_dir,
             prefix="train/",
             reduce_fn=tf.reduce_mean)
       else:
