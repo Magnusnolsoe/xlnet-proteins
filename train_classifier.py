@@ -131,6 +131,9 @@ flags.DEFINE_string("cls_scope", default=None,
 flags.DEFINE_bool("is_regression", default=False,
       help="Whether it's a regression task.")
 
+flags.DEFINE_integer("epochs", default=1,
+      help="Amount of epochs")
+
 FLAGS = flags.FLAGS
 
 
@@ -239,6 +242,8 @@ def file_based_convert_examples_to_features(
   if num_passes > 1:
     examples *= num_passes
 
+  total_examples = 0
+
   for (ex_index, example) in enumerate(examples):
     if ex_index % 10000 == 0:
       tf.logging.info("Writing example {} of {}".format(ex_index,
@@ -268,10 +273,12 @@ def file_based_convert_examples_to_features(
           [int(feature.is_eop)])
       features["is_real_example"] = create_int_feature(
           [int(feature.is_real_example)])
+      total_examples = total_examples + 1
 
       tf_example = tf.train.Example(features=tf.train.Features(feature=features))
       writer.write(tf_example.SerializeToString())
   writer.close()
+  return total_examples
 
 
 def file_based_input_fn_builder(input_file, seq_length, is_training,
@@ -536,7 +543,7 @@ def main(_):
     np.random.shuffle(train_examples)
     tf.logging.info("Num of train samples: {}".format(len(train_examples)))
 
-    file_based_convert_examples_to_features(
+    tot_ex = file_based_convert_examples_to_features(
         train_examples, label_list, FLAGS.max_seq_length, tokenize_fn,
         train_file, FLAGS.num_passes)
 
