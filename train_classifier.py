@@ -204,7 +204,7 @@ class SubLocProcessor(DataProcessor):
 
   def get_test_examples(self, data_dir):
     return self._create_examples(
-      self._read_txt(os.path.join(data_dir, self.train_file)), "test")
+      self._read_txt(os.path.join(data_dir, self.test_file)), "test")
 
   def get_labels(self):
     """See base class."""
