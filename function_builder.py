@@ -186,7 +186,7 @@ def get_classification_loss(
         scope=cls_scope,
         return_logits=True)
 
-    total_loss = tf.reduce_mean(per_example_loss)*is_eop[0]
+    total_loss = tf.reduce_mean(per_example_loss)
 
     return total_loss, per_example_loss, logits
 

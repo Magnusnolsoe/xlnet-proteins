@@ -13,8 +13,6 @@ import numpy as np
 import os, sys
 import json
 
-from segment_splitting import _split_a_and_b
-
 LOOKUP_TABLE = {'M': 0, 'R': 1, 'W': 2, 'L': 3, 'D': 4,
                 'K': 5, 'F': 6, 'G': 7, 'E': 8, 'S': 9,
                 'V': 10, 'A': 11, 'H': 12, 'T': 13,'P': 14,
@@ -99,7 +97,6 @@ def _local_perm(inputs, targets, is_masked, perm_size, seq_len):
     # 1: use mask as input and have loss
     # 0: use token (or [SEP], [CLS]) as input and do not have loss
     target_mask = tf.cast(is_masked, tf.float32)
-    print(target_mask.shape.as_list())
 
     # Create `perm_mask`
     # `target_tokens` cannot see themselves
@@ -312,7 +309,13 @@ def preprocess_protein(protein_seq):
     return protein_seq.strip().split(' ')
 
 def encode_ids(protein_seq):
-    return list(map(lambda x: LOOKUP_TABLE[x], protein_seq))
+    encoded = []
+    for amino in protein_seq:
+        if amino in LOOKUP_TABLE:
+            encoded.append(LOOKUP_TABLE[amino])
+        else:
+            encoded.append(special_symbols[amino])
+    return encoded
 
 def batchify(data, bsz_per_host, prot_ids=None):
     num_step = len(data) // bsz_per_host
