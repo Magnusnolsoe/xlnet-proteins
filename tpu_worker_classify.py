@@ -91,7 +91,7 @@ def generate_param_config(dirname, suggestion_id, params, model_dir_total_path, 
 
     dropout = params['dropout']/10
     dropatt = params['dropatt']/10
-     if params['weight_decay'] < -8:
+    if params['weight_decay'] < -8:
         weight_decay = 0
     else:
         weight_decay = pow(10, params['weight_decay'])
