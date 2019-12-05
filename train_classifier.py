@@ -477,6 +477,21 @@ def get_model_fn(n_class):
 
   return model_fn
 
+def calculate_output_examples(
+    examples, label_list, max_seq_length, tokenize_fn, output_file,
+    num_passes=1):
+
+  total_examples = 0
+
+  for (ex_index, example) in enumerate(examples):
+
+    feature_list = convert_single_example(ex_index, example, label_list,
+                                     max_seq_length, tokenize_fn, print_log=False)
+
+    for feature in feature_list:
+      total_examples = total_examples + 1
+
+  return total_examples
 
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
@@ -514,6 +529,70 @@ def main(_):
     text = preprocess_protein(text)
     return encode_ids(text)
 
+  if FLAGS.do_train:
+    train_file_base = "len-{}.train.tf_record".format(
+        FLAGS.max_seq_length)
+    train_file = os.path.join(FLAGS.output_dir, train_file_base)
+    tf.logging.info("Use tfrecord file {}".format(train_file))
+
+    train_examples = processor.get_train_examples(FLAGS.data_dir)
+    np.random.shuffle(train_examples)
+    tf.logging.info("Num of train samples: {}".format(len(train_examples)))
+
+    train_examples_before = calculate_output_examples(
+        train_examples, label_list, FLAGS.max_seq_length, tokenize_fn,
+        train_file, FLAGS.num_passes)
+
+    while train_examples_before % FLAGS.train_batch_size != 0:
+      train_examples.append(PaddingInputExample())
+      train_examples_before = train_examples_before + 1
+
+    tot_train_examples = file_based_convert_examples_to_features(
+        train_examples, label_list, FLAGS.max_seq_length, tokenize_fn,
+        train_file, FLAGS.num_passes)
+
+    train_input_fn = file_based_input_fn_builder(
+        input_file=train_file,
+        seq_length=FLAGS.max_seq_length,
+        is_training=True,
+        drop_remainder=True)
+
+    assert tot_train_examples % FLAGS.train_batch_size == 0
+    train_steps = int(tot_train_examples // FLAGS.train_batch_size)
+    FLAGS.train_steps = train_steps
+    FLAGS.save_steps = train_steps*FLAGS.epochs
+
+    #Load eval data
+
+    eval_examples = processor.get_test_examples(FLAGS.data_dir)
+
+    eval_file_base = "len-{}.{}.eval.tf_record".format(
+        FLAGS.max_seq_length, FLAGS.eval_split)
+    eval_file = os.path.join(FLAGS.output_dir, eval_file_base)
+
+    eval_examples_before = calculate_output_examples(
+        eval_examples, label_list, FLAGS.max_seq_length, tokenize_fn,
+        eval_file)
+
+    while eval_examples_before % FLAGS.eval_batch_size != 0:
+      eval_examples.append(PaddingInputExample())
+      eval_examples_before = eval_examples_before + 1
+
+    tot_eval_examples= file_based_convert_examples_to_features(
+        eval_examples, label_list, FLAGS.max_seq_length, tokenize_fn,
+        eval_file)
+
+    eval_input_fn = file_based_input_fn_builder(
+        input_file=eval_file,
+        seq_length=FLAGS.max_seq_length,
+        is_training=False,
+        drop_remainder=True)
+
+    assert tot_eval_examples % FLAGS.eval_batch_size == 0
+    eval_steps = int(tot_eval_examples // FLAGS.eval_batch_size)
+
+  tf.logging.info("##################################### TRAIN STEPS {} #####################################".format(train_steps))
+
   run_config = model_utils.configure_tpu(FLAGS)
 
   model_fn = get_model_fn(len(label_list) if label_list is not None else None)
@@ -527,33 +606,31 @@ def main(_):
         config=run_config,
         train_batch_size=FLAGS.train_batch_size,
         predict_batch_size=FLAGS.predict_batch_size,
-        eval_batch_size=FLAGS.eval_batch_size)
+        eval_batch_size=FLAGS.eval_batch_size,
+        eval_on_tpu=FLAGS.use_tpu)
   else:
     estimator = tf.estimator.Estimator(
         model_fn=model_fn,
         config=run_config)
 
   if FLAGS.do_train:
-    train_file_base = "len-{}.train.tf_record".format(
-        FLAGS.max_seq_length)
-    train_file = os.path.join(FLAGS.output_dir, train_file_base)
-    tf.logging.info("Use tfrecord file {}".format(train_file))
+    train_times, eval_times = [], []
+    stopped_early = False
+    for i in range(FLAGS.epochs):
 
-    train_examples = processor.get_train_examples(FLAGS.data_dir)
-    np.random.shuffle(train_examples)
-    tf.logging.info("Num of train samples: {}".format(len(train_examples)))
+        tf.logging.info("#### Starting training cycle")
+        start = time.time()
+        train_ret = estimator.train(input_fn=train_input_fn, steps=FLAGS.train_steps)
+        end = time.time()
+        train_times.append((end-start)/60)
 
-    tot_ex = file_based_convert_examples_to_features(
-        train_examples, label_list, FLAGS.max_seq_length, tokenize_fn,
-        train_file, FLAGS.num_passes)
+        tf.logging.info("#### Starting evaluation/validation cycle")
+        start = time.time()
+        eval_ret = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
+        end = time.time()
+        eval_times.append((end-start)/60)
 
-    train_input_fn = file_based_input_fn_builder(
-        input_file=train_file,
-        seq_length=FLAGS.max_seq_length,
-        is_training=True,
-        drop_remainder=True)
-
-    estimator.train(input_fn=train_input_fn, max_steps=FLAGS.train_steps)
+        tf.logging.info("##################################### EPOCH {} #####################################".format(i+1))
 
   if FLAGS.do_eval or FLAGS.do_predict:
     if FLAGS.eval_split == "dev":

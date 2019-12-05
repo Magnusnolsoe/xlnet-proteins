@@ -43,7 +43,7 @@ class InputFeatures(object):
 
 
 def convert_single_example(ex_index, example, label_list, max_seq_length,
-                              tokenize_fn):
+                              tokenize_fn, print_log=True):
   """Converts a single `InputExample` into a list of `InputFeatures`."""
 
   if isinstance(example, PaddingInputExample):
@@ -124,7 +124,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
       label_id = label_map[example.label]
     else:
       label_id = example.label
-    if ex_index < 5:
+    if ex_index < 5 and print_log:
       tf.logging.info("*** Example ***")
       tf.logging.info("guid: %s" % (example.guid))
       tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
