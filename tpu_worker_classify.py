@@ -24,9 +24,9 @@ flags.DEFINE_string("tpu_name", default="",
         help="TPU name")
 
 # Pretrain model parameters
-flags.DEFINE_string("model_config_path", defualt="",
+flags.DEFINE_string("model_config_path", default="",
         help="Pretrained model config path")
-flags.DEFINE_string("init_checkpoint", defualt="",
+flags.DEFINE_string("init_checkpoint", default="",
         help="Pretrained model checkpoint path")
 
 # Unprocessed data dir
