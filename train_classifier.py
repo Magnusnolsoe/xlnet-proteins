@@ -136,6 +136,9 @@ flags.DEFINE_integer("epochs", default=1,
 
 FLAGS = flags.FLAGS
 
+# Internal configuration
+PATIENCE = 5 # Early stopping patience
+ROUNDING_PRECISION = 5 # precision of error when doing early stopping
 
 class InputExample(object):
   """A single training/test example for simple sequence classification."""
@@ -614,23 +617,55 @@ def main(_):
         config=run_config)
 
   if FLAGS.do_train:
+    eval_errs, eval_acc = [], []
+    xs = list(range(PATIENCE))
     train_times, eval_times = [], []
     stopped_early = False
     for i in range(FLAGS.epochs):
 
-        tf.logging.info("#### Starting training cycle")
-        start = time.time()
-        train_ret = estimator.train(input_fn=train_input_fn, steps=FLAGS.train_steps)
-        end = time.time()
-        train_times.append((end-start)/60)
+      tf.logging.info("#### Starting training cycle")
+      start = time.time()
+      train_ret = estimator.train(input_fn=train_input_fn, steps=FLAGS.train_steps)
+      end = time.time()
+      train_times.append((end-start)/60)
 
-        tf.logging.info("#### Starting evaluation/validation cycle")
-        start = time.time()
-        eval_ret = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
-        end = time.time()
-        eval_times.append((end-start)/60)
+      tf.logging.info("#### Starting evaluation/validation cycle")
+      start = time.time()
+      eval_ret = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
+      end = time.time()
+      eval_times.append((end-start)/60)
 
-        tf.logging.info("##################################### EPOCH {} #####################################".format(i+1))
+      # Early Stopping based on gradient from last PATIENCE points
+      eval_acc.append(eval_ret['eval_accuracy'])
+      eval_errs.append(eval_ret['eval_loss'])
+      if len(eval_errs) > PATIENCE:
+            last_errs = eval_errs[-PATIENCE:]
+            slope = round(np.polyfit(xs, last_errs, deg=1)[0], ROUNDING_PRECISION)
+            if slope >= 0:
+                  stopped_early = True
+                  break
+
+      tf.logging.info("##################################### EPOCH {} #####################################".format(i+1))
+
+    best_acc = max(eval_acc)
+    best_loss = min(eval_errs)
+    std = np.std(eval_acc)
+    if last_errs is None:
+          last_errs = []
+          slope = 0
+    result = {
+          'loss': str(best_loss),
+          'acc': str(best_acc),
+          'std': str(std),
+          'avg_train_time': str(np.mean(train_times)),
+          'avg_eval_time': str(np.mean(eval_times)),
+          'stopped_early': str(stopped_early),
+          'last_errors': str(last_errs),
+          'slope': str(slope),
+          'epoch': str(i)
+    }
+    with tf.gfile.Open(os.path.join(FLAGS.bucket_uri, "results", "{}.json".format(FLAGS.run_id)), "w") as fp:
+          json.dump(result, fp)
 
   if FLAGS.do_eval or FLAGS.do_predict:
     if FLAGS.eval_split == "dev":
