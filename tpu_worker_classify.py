@@ -124,7 +124,7 @@ def generate_param_config(dirname, suggestion_id, params, model_dir_total_path, 
 
 def start_tpu(config_path):
 
-    with tf.gfile.Open(FLAGS.config, 'r') as config_file:
+    with tf.gfile.Open(config_path, 'r') as config_file:
         params = json.load(config_file)
 
         param_keys = [
