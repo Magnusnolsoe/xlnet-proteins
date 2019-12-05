@@ -115,7 +115,7 @@ def generate_param_config(dirname, suggestion_id, params, model_dir_total_path, 
             'cls_scope': None, 'is_regression': False, "python": "python3", "epochs": EPOCHS, "run_id": suggestion_id,
             "bucket_uri": FLAGS.bucket_name}
 
-    path = os.path.join(FLAGS.bucket_name, "param_configs", "{}.json".format(suggestion_id))
+    path = os.path.join(FLAGS.bucket_name, "param_configs_finetuning", "{}.json".format(suggestion_id))
     with tf.gfile.Open(path, 'w') as fp:
         json.dump(configs, fp)
     
