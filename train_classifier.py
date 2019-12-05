@@ -134,6 +134,9 @@ flags.DEFINE_bool("is_regression", default=False,
 flags.DEFINE_integer("epochs", default=1,
       help="Amount of epochs")
 
+flags.DEFINE_string("run_id", default=None,
+      help="Id of current run.")
+
 FLAGS = flags.FLAGS
 
 # Internal configuration
@@ -623,29 +626,29 @@ def main(_):
     stopped_early = False
     for i in range(FLAGS.epochs):
 
-      tf.logging.info("#### Starting training cycle")
-      start = time.time()
-      train_ret = estimator.train(input_fn=train_input_fn, steps=FLAGS.train_steps)
-      end = time.time()
-      train_times.append((end-start)/60)
+        tf.logging.info("#### Starting training cycle")
+        start = time.time()
+        train_ret = estimator.train(input_fn=train_input_fn, steps=FLAGS.train_steps)
+        end = time.time()
+        train_times.append((end-start)/60)
 
-      tf.logging.info("#### Starting evaluation/validation cycle")
-      start = time.time()
-      eval_ret = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
-      end = time.time()
-      eval_times.append((end-start)/60)
+        tf.logging.info("#### Starting evaluation/validation cycle")
+        start = time.time()
+        eval_ret = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
+        end = time.time()
+        eval_times.append((end-start)/60)
 
-      # Early Stopping based on gradient from last PATIENCE points
-      eval_acc.append(eval_ret['eval_accuracy'])
-      eval_errs.append(eval_ret['eval_loss'])
-      if len(eval_errs) > PATIENCE:
-            last_errs = eval_errs[-PATIENCE:]
-            slope = round(np.polyfit(xs, last_errs, deg=1)[0], ROUNDING_PRECISION)
-            if slope >= 0:
-                  stopped_early = True
-                  break
+        # Early Stopping based on gradient from last PATIENCE points
+        eval_acc.append(eval_ret['eval_accuracy'])
+        eval_errs.append(eval_ret['eval_loss'])
+        if len(eval_errs) > PATIENCE:
+              last_errs = eval_errs[-PATIENCE:]
+              slope = round(np.polyfit(xs, last_errs, deg=1)[0], ROUNDING_PRECISION)
+              if slope >= 0:
+                    stopped_early = True
+                    break
 
-      tf.logging.info("##################################### EPOCH {} #####################################".format(i+1))
+        tf.logging.info("##################################### EPOCH {} #####################################".format(i+1))
 
     best_acc = max(eval_acc)
     best_loss = min(eval_errs)
@@ -664,7 +667,7 @@ def main(_):
           'slope': str(slope),
           'epoch': str(i)
     }
-    with tf.gfile.Open(os.path.join(FLAGS.bucket_uri, "results", "{}.json".format(FLAGS.run_id)), "w") as fp:
+    with tf.gfile.Open(os.path.join(FLAGS.bucket_uri, "finetuning-results", "{}.json".format(FLAGS.run_id)), "w") as fp:
           json.dump(result, fp)
 
   if FLAGS.do_eval or FLAGS.do_predict:
