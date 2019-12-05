@@ -78,6 +78,9 @@ flags.DEFINE_string("master", default=None, help="master")
 flags.DEFINE_integer("iterations", default=1000,
       help="number of iterations per TPU training loop.")
 
+flags.DEFINE_string("bucket_uri", default=None,
+      help="URI of gcp bucket.")
+
 # training
 flags.DEFINE_bool("do_train", default=False, help="whether to do training")
 flags.DEFINE_integer("train_steps", default=1000,

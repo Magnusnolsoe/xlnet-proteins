@@ -112,7 +112,8 @@ def generate_param_config(dirname, suggestion_id, params, model_dir_total_path, 
             'do_predict': False, 'predict_threshold': None, 'eval_split': "test", 'eval_batch_size': batch_size,
             'predict_batch_size': batch_size, 'predict_dir': None, 'eval_all_ckpt': False, 'predict_ckpt': None,
             'task_name': "subloc", 'max_seq_length': SEQ_LEN, 'shuffle_buffer': None, 'num_passes': None,
-            'cls_scope': None, 'is_regression': False, "python": "python3", "epochs": EPOCHS, "run_id": suggestion_id}
+            'cls_scope': None, 'is_regression': False, "python": "python3", "epochs": EPOCHS, "run_id": suggestion_id,
+            "bucket_uri": FLAGS.bucket_name}
 
     path = os.path.join(FLAGS.bucket_name, "param_configs", "{}.json".format(suggestion_id))
     with tf.gfile.Open(path, 'w') as fp:
@@ -139,7 +140,7 @@ def start_tpu(config_path):
             'do_predict', 'predict_threshold', 'eval_split', 'eval_batch_size',
             'predict_batch_size', 'predict_dir', 'eval_all_ckpt', 'predict_ckpt',
             'task_name', 'max_seq_length', 'shuffle_buffer', 'num_passes',
-            'cls_scope', 'is_regression', 'run_id'
+            'cls_scope', 'is_regression', 'run_id', 'bucket_uri'
         ]
 
         args = ""
