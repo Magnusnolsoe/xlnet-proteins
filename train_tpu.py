@@ -341,6 +341,7 @@ def main(unused_argv):
   xs = list(range(PATIENCE))
   train_times, eval_times = [], []
   stopped_early = False
+  last_errs = []
   for i in range(FLAGS.epochs):
 
       tf.logging.info("#### Starting training cycle")
@@ -369,7 +370,7 @@ def main(unused_argv):
   best_loss = min(eval_errs)
   best_pplx = np.exp(best_loss)
   std = np.std(list(map(np.exp, eval_errs)))
-  if last_errs is None:
+  if not last_errs:
         last_errs = []
         slope = 0
   result = {
