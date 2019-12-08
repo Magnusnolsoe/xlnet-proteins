@@ -655,7 +655,8 @@ def main(_):
         tf.logging.info("##################################### EPOCH {} #####################################".format(i+1))
 
     best_acc = max(eval_acc)
-    best_loss = min(eval_errs)
+    indx = eval_acc.index(best_acc)
+    best_loss = eval_errs[indx]
     std = np.std(eval_acc)
     if not last_errs:
           last_errs = []
