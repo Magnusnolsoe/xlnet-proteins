@@ -180,7 +180,8 @@ def run_worker(unused_args):
         # create model_dir and param config file
         model_dir_basename = generate_model_dir(suggestion.id)
         model_dir_total_path = os.path.join(FLAGS.bucket_name, model_dir_basename)
-        output_data_dir_base_name = generate_data_output_dir(suggestion.id)
+        output_dir = "subloc_bsz-{}".format(suggestion.assignments['batch_size'])
+        output_data_dir_base_name = generate_data_output_dir(output_dir)
         output_data_dir_total_path = os.path.join(FLAGS.bucket_name, output_data_dir_base_name)
         config_path = generate_param_config(
             model_dir_basename,

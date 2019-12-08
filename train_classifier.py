@@ -241,8 +241,13 @@ def file_based_convert_examples_to_features(
 
   # do not create duplicated records
   if tf.gfile.Exists(output_file) and not FLAGS.overwrite_data:
-    tf.logging.info("Do not overwrite tfrecord {} exists.".format(output_file))
-    return
+    total_examples = 0
+    with open(os.path.join(FLAGS.output_dir, "config.json"), 'r') as file:
+      values = json.load(file)
+      total_examples = values['num_batches']
+    
+    tf.logging.info("File tfrecord {} exists.".format(output_file))
+    return total_examples
 
   tf.logging.info("Create new tfrecord {}.".format(output_file))
 
