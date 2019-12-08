@@ -244,7 +244,7 @@ def file_based_convert_examples_to_features(
     total_examples = 0
     with open(os.path.join(FLAGS.output_dir, "config.json"), 'r') as file:
       values = json.load(file)
-      total_examples = values['num_batches']
+      total_examples = values['num_examples']
     
     tf.logging.info("File tfrecord {} exists.".format(output_file))
     return total_examples
@@ -292,6 +292,11 @@ def file_based_convert_examples_to_features(
       tf_example = tf.train.Example(features=tf.train.Features(feature=features))
       writer.write(tf_example.SerializeToString())
   writer.close()
+
+  metadata = {'num_examples': total_examples}
+  with open(os.path.join(FLAGS.output_dir, 'config.json'), 'w') as file:
+    json.dump(metadata, file)
+    
   return total_examples
 
 
