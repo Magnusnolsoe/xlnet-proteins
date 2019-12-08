@@ -101,19 +101,19 @@ def generate_param_config(dirname, suggestion_id, params, model_dir_total_path, 
     batch_size = int(params['batch_size'])
     d_method = params['decay_method']
 
-    configs = {'model_config_path': FLAGS.model_config_path , 'dropout': dropout, 'dropatt': dropatt, 'clamp_len': None,
-            'summary_type': 'last', 'use_summ_proj': None, 'use_bfloat16': True, 'init': 'normal',
-            'init_std': None, 'init_range': None, 'overwrite_data': True, 'init_checkpoint': FLAGS.init_checkpoint,
-            'output_dir': output_data_dir, 'model_dir': model_dir_total_path, 'data_dir': FLAGS.data_dir, 'use_tpu': True, 'num_hosts': NUM_HOSTS,
-            'num_core_per_host': NUM_CORES, 'tpu_job_name': None, 'tpu': FLAGS.tpu_name, 'tpu_zone': tpu_zone,
-            'gcp_project': FLAGS.gcp_project, 'master': None, 'iterations': ITERATIONS, 'do_train': True, 'train_steps': None,
-            'warmup_steps': warmup_steps, 'learning_rate': lr_rate, 'lr_layer_decay_rate': lr_layer_decay_rate,
-            'min_lr_ratio': None, 'clip': None, 'max_save': None, 'save_steps': None, 'train_batch_size': batch_size,
-            'weight_decay': weight_decay, 'adam_epsilon': None, 'decay_method': d_method, 'do_eval': False,
-            'do_predict': False, 'predict_threshold': None, 'eval_split': "test", 'eval_batch_size': batch_size,
-            'predict_batch_size': batch_size, 'predict_dir': None, 'eval_all_ckpt': False, 'predict_ckpt': None,
-            'task_name': "subloc", 'max_seq_length': SEQ_LEN, 'shuffle_buffer': None, 'num_passes': None,
-            'cls_scope': None, 'is_regression': False, "python": "python3", "epochs": EPOCHS, "run_id": suggestion_id,
+    configs = {"model_config_path": FLAGS.model_config_path , "dropout": dropout, "dropatt": dropatt, "clamp_len": None,
+            "summary_type": "last", "use_summ_proj": None, "use_bfloat16": True, "init": "normal",
+            "init_std": None, "init_range": None, "overwrite_data": True, "init_checkpoint": FLAGS.init_checkpoint,
+            "output_dir": output_data_dir, "model_dir": model_dir_total_path, "data_dir": FLAGS.data_dir, "use_tpu": True, "num_hosts": NUM_HOSTS,
+            "num_core_per_host": NUM_CORES, "tpu_job_name": None, "tpu": FLAGS.tpu_name, "tpu_zone": tpu_zone,
+            "gcp_project": FLAGS.gcp_project, "master": None, "iterations": ITERATIONS, "do_train": True, "train_steps": None,
+            "warmup_steps": warmup_steps, "learning_rate": lr_rate, "lr_layer_decay_rate": lr_layer_decay_rate,
+            "min_lr_ratio": None, "clip": None, "max_save": None, "save_steps": None, "train_batch_size": batch_size,
+            "weight_decay": weight_decay, "adam_epsilon": None, "decay_method": d_method, "do_eval": False,
+            "do_predict": False, "predict_threshold": None, "eval_split": "test", "eval_batch_size": batch_size,
+            "predict_batch_size": batch_size, "predict_dir": None, "eval_all_ckpt": False, "predict_ckpt": None,
+            "task_name": "subloc", "max_seq_length": SEQ_LEN, "shuffle_buffer": None, "num_passes": None,
+            "cls_scope": None, "is_regression": False, "python": "python3", "epochs": EPOCHS, "run_id": suggestion_id,
             "bucket_uri": FLAGS.bucket_name}
 
     path = os.path.join(FLAGS.bucket_name, "param_configs_finetuning", "{}.json".format(suggestion_id))
