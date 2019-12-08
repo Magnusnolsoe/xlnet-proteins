@@ -242,7 +242,8 @@ def file_based_convert_examples_to_features(
   # do not create duplicated records
   if tf.gfile.Exists(output_file) and not FLAGS.overwrite_data:
     total_examples = 0
-    with open(os.path.join(FLAGS.output_dir, "config.json"), 'r') as file:
+    
+    with tf.gfile.Open(os.path.join(FLAGS.output_dir, "config.json"), "r") as file:
       values = json.load(file)
       total_examples = values['num_examples']
     
@@ -296,7 +297,7 @@ def file_based_convert_examples_to_features(
   metadata = {'num_examples': total_examples}
   with tf.gfile.Open(os.path.join(FLAGS.output_dir, 'config.json'), "w") as fp:
           json.dump(metadata, fp)
-          
+
   return total_examples
 
 
