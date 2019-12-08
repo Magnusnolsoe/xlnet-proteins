@@ -103,7 +103,7 @@ def generate_param_config(dirname, suggestion_id, params, model_dir_total_path, 
 
     configs = {"model_config_path": FLAGS.model_config_path , "dropout": dropout, "dropatt": dropatt, "clamp_len": None,
             "summary_type": "last", "use_summ_proj": None, "use_bfloat16": False, "init": "normal",
-            "init_std": None, "init_range": None, "overwrite_data": True, "init_checkpoint": FLAGS.init_checkpoint,
+            "init_std": None, "init_range": None, "overwrite_data": False, "init_checkpoint": FLAGS.init_checkpoint,
             "output_dir": output_data_dir, "model_dir": model_dir_total_path, "data_dir": FLAGS.data_dir, "use_tpu": True, "num_hosts": NUM_HOSTS,
             "num_core_per_host": NUM_CORES, "tpu_job_name": None, "tpu": FLAGS.tpu_name, "tpu_zone": tpu_zone,
             "gcp_project": FLAGS.gcp_project, "master": None, "iterations": ITERATIONS, "do_train": True, "train_steps": None,
