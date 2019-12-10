@@ -246,6 +246,7 @@ def file_based_convert_examples_to_features(
     with tf.gfile.Open(os.path.join(FLAGS.output_dir, "config.json"), "r") as file:
       values = json.load(file)
       total_examples = values['num_examples']
+      tf.logging.info("### Total number of examples: {}".format(total_examples))
     
     tf.logging.info("File tfrecord {} exists.".format(output_file))
     return total_examples
