@@ -76,24 +76,21 @@ def generate_param_config(dirname, suggestion_id, params):
     # Suggestions from SigOpt
     seq_len = int(params['seq_len'])
     reuse_len = seq_len // 2
-    mem_len = params['mem_len']*10
-    perm_size = int(reuse_len / int(params['perm_size']))
-    n_layer = params['n_layer']
-    d_model = pow(2,params['d_model'])
-    d_embed = pow(2,params['d_embed'])
-    n_head = params['n_head']
-    d_head = pow(2,params['d_head'])
-    d_inner = pow(2,params['d_inner'])
+    mem_len = params['mem_len']*8
+    perm_size = reuse_len
+    n_layer = 16
+    d_model = 1024
+    d_embed = 1024
+    n_head = 16
+    d_head = 64
+    d_inner = 4096
     batch_size = 64
     lr_rate = params['learning_rate']
     d_method = params['decay_method']
     dropout = params['dropout']/10
     dropatt = params['dropatt']/10
-    warmup_steps = params['warmup_steps']*100
-    if params['weight_decay'] < -8:
-        weight_decay = 0
-    else:
-        weight_decay = pow(10, params['weight_decay'])
+    warmup_steps = params['warmup_steps']*1000
+    weight_decay = 0
 
     if seq_len == 512:
         n_pred = 85
