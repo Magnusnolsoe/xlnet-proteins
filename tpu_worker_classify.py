@@ -77,9 +77,8 @@ def generate_model_dir(dirname):
 def generate_data_output_dir(dirname):
     output_dir_basename = os.path.join("finetuning-data", dirname)
     _dir = os.path.join(FLAGS.bucket_name, output_dir_basename)
-    if tf.gfile.Exists(_dir):
-        tf.gfile.DeleteRecursively(_dir)
-    tf.gfile.MakeDirs(_dir)
+    if not tf.gfile.Exists(_dir):
+        tf.gfile.MakeDirs(_dir)
 
     return output_dir_basename
 
@@ -101,10 +100,20 @@ def generate_param_config(dirname, suggestion_id, params, model_dir_total_path, 
     batch_size = int(params['batch_size'])
     d_method = params['decay_method']
 
-    configs = {"model_config_path": FLAGS.model_config_path , "dropout": dropout, "dropatt": dropatt, "clamp_len": None,
+    if FLAGS.bucket_name is not None and FLAGS.bucket_name != "":
+        model_config_path = os.path.join(FLAGS.bucket_name, FLAGS.model_config_path)
+        init_checkpoint = os.path.join(FLAGS.bucket_name, FLAGS.init_checkpoint)
+        data_dir = os.path.join(FLAGS.bucket_name, FLAGS.data_dir)
+    else:
+        model_config_path = FLAGS.model_config_path
+        init_checkpoint = FLAGS.init_checkpoint
+        data_dir = FLAGS.data_dir
+
+
+    configs = {"model_config_path": model_config_path , "dropout": dropout, "dropatt": dropatt, "clamp_len": None,
             "summary_type": "last", "use_summ_proj": None, "use_bfloat16": False, "init": "normal",
-            "init_std": None, "init_range": None, "overwrite_data": False, "init_checkpoint": FLAGS.init_checkpoint,
-            "output_dir": output_data_dir, "model_dir": model_dir_total_path, "data_dir": FLAGS.data_dir, "use_tpu": True, "num_hosts": NUM_HOSTS,
+            "init_std": None, "init_range": None, "overwrite_data": False, "init_checkpoint": init_checkpoint,
+            "output_dir": output_data_dir, "model_dir": model_dir_total_path, "data_dir": data_dir, "use_tpu": True, "num_hosts": NUM_HOSTS,
             "num_core_per_host": NUM_CORES, "tpu_job_name": None, "tpu": FLAGS.tpu_name, "tpu_zone": tpu_zone,
             "gcp_project": FLAGS.gcp_project, "master": None, "iterations": ITERATIONS, "do_train": True, "train_steps": None,
             "warmup_steps": warmup_steps, "learning_rate": lr_rate, "lr_layer_decay_rate": lr_layer_decay_rate,
