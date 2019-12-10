@@ -236,14 +236,14 @@ class SubLocProcessor(DataProcessor):
 
 def file_based_convert_examples_to_features(
     examples, label_list, max_seq_length, tokenize_fn, output_file,
-    num_passes=1):
+    num_passes=1, split="train"):
   """Convert a set of `InputExample`s to a TFRecord file."""
 
   # do not create duplicated records
   if tf.gfile.Exists(output_file) and not FLAGS.overwrite_data:
     total_examples = 0
     
-    with tf.gfile.Open(os.path.join(FLAGS.output_dir, "config.json"), "r") as file:
+    with tf.gfile.Open(os.path.join(FLAGS.output_dir, "{}-config.json".format(split)), "r") as file:
       values = json.load(file)
       total_examples = values['num_examples']
       tf.logging.info("### Total number of examples: {}".format(total_examples))
@@ -296,7 +296,7 @@ def file_based_convert_examples_to_features(
   writer.close()
 
   metadata = {'num_examples': total_examples}
-  with tf.gfile.Open(os.path.join(FLAGS.output_dir, 'config.json'), "w") as fp:
+  with tf.gfile.Open(os.path.join(FLAGS.output_dir, '{}-config.json'.format(split)), "w") as fp:
           json.dump(metadata, fp)
 
   return total_examples
@@ -570,7 +570,7 @@ def main(_):
 
     tot_train_examples = file_based_convert_examples_to_features(
         train_examples, label_list, FLAGS.max_seq_length, tokenize_fn,
-        train_file, FLAGS.num_passes)
+        train_file, FLAGS.num_passes, split="train")
 
     train_input_fn = file_based_input_fn_builder(
         input_file=train_file,
@@ -601,7 +601,7 @@ def main(_):
 
     tot_eval_examples= file_based_convert_examples_to_features(
         eval_examples, label_list, FLAGS.max_seq_length, tokenize_fn,
-        eval_file)
+        eval_file, split="eval")
 
     eval_input_fn = file_based_input_fn_builder(
         input_file=eval_file,
