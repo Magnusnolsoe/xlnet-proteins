@@ -13,8 +13,6 @@ import numpy as np
 import os, sys
 import json
 
-from segment_splitting import _split_a_and_b
-
 LOOKUP_TABLE = {'M': 0, 'R': 1, 'W': 2, 'L': 3, 'D': 4,
                 'K': 5, 'F': 6, 'G': 7, 'E': 8, 'S': 9,
                 'V': 10, 'A': 11, 'H': 12, 'T': 13,'P': 14,
