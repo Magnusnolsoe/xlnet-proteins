@@ -28,12 +28,14 @@ class InputFeatures(object):
   """A single set of features of data."""
 
   def __init__(self,
+               prot_id,
                input_ids,
                input_mask,
                segment_ids,
                label_id,
                is_eop,
                is_real_example=True):
+    self.prot_id = prot_id
     self.input_ids = input_ids
     self.input_mask = input_mask
     self.segment_ids = segment_ids
@@ -97,7 +99,9 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     else:
       tokens = tokenized[start : end]
       segment_ids = [SEG_ID] * prot_span.length
-      
+    
+    prot_id = int(example.guid.split("-")[1])
+
     if is_eop:
       tokens.append(EOP_ID)
       segment_ids.append(SEG_ID_EOP)
@@ -127,6 +131,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     if ex_index < 5 and print_log:
       tf.logging.info("*** Example ***")
       tf.logging.info("guid: %s" % (example.guid))
+      tf.logging.info("prot_id: %s" % str(prot_id))
       tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
       tf.logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
       tf.logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
@@ -134,6 +139,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
       tf.logging.info("label: {} (id = {})".format(example.label, label_id))
 
     feature = InputFeatures(
+        prot_id=prot_id,
         input_ids=input_ids,
         input_mask=input_mask,
         segment_ids=segment_ids,

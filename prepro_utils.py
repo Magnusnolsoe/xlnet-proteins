@@ -6,6 +6,7 @@ from __future__ import print_function
 import unicodedata
 import six
 from functools import partial
+from data_utils import LOOKUP_TABLE, special_symbols
 
 
 SPIECE_UNDERLINE = '▁'
@@ -46,25 +47,6 @@ def print_(*args):
   print(*new_args)
 
 
-def preprocess_text(inputs, lower=False, remove_space=True, keep_accents=False):
-  if remove_space:
-    outputs = ' '.join(inputs.strip().split())
-  else:
-    outputs = inputs
-  outputs = outputs.replace("``", '"').replace("''", '"')
-
-  if six.PY2 and isinstance(outputs, str):
-    outputs = outputs.decode('utf-8')
-
-  if not keep_accents:
-    outputs = unicodedata.normalize('NFKD', outputs)
-    outputs = ''.join([c for c in outputs if not unicodedata.combining(c)])
-  if lower:
-    outputs = outputs.lower()
-
-  return outputs
-
-
 def encode_pieces(sp_model, text, return_unicode=True, sample=False):
   # return_unicode is used only for py2
 
@@ -103,10 +85,17 @@ def encode_pieces(sp_model, text, return_unicode=True, sample=False):
   return new_pieces
 
 
-def encode_ids(sp_model, text, sample=False):
-  pieces = encode_pieces(sp_model, text, return_unicode=False, sample=sample)
-  ids = [sp_model.PieceToId(piece) for piece in pieces]
-  return ids
+def preprocess_text(text):
+    return text.strip().split(' ')
+
+def encode_ids(protein_seq):
+    encoded = []
+    for amino in protein_seq:
+        if amino in LOOKUP_TABLE:
+            encoded.append(LOOKUP_TABLE[amino])
+        else:
+            encoded.append(special_symbols[amino])
+    return encoded
 
 
 if __name__ == '__main__':
