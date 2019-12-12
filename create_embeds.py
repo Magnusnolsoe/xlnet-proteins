@@ -326,8 +326,10 @@ def main(_):
         except tf.errors.OutOfRangeError:
             D.append(np.concatenate(d))
             T.append(target)
-            pickle.dump(D, open( os.path.join(FLAGS.output_dir, "embeddings.p"), "wb" ) )
-            pickle.dump(T, open( os.path.join(FLAGS.output_dir, "targets.p"), "wb" ) )
+            with tf.gfile.Open(os.path.join(FLAGS.output_dir, "embeddings.p"), "wb") as fp:
+              pickle.dump(D, fp)
+            with tf.gfile.Open(os.path.join(FLAGS.output_dir, "targets.p"), "wb") as fp:
+              pickle.dump(T, fp)
             tf.logging.info("DONE")
 
 if __name__ == "__main__":
