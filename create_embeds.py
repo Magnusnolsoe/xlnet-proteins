@@ -4,6 +4,7 @@ import tensorflow as tf
 import xlnet
 import numpy as np
 import pickle
+import time
 
 from absl import app, flags
 from classifier_utils import convert_single_example
@@ -291,20 +292,21 @@ def main(_):
 
     fetches = [output, example]
 
-    gpu_options = tf.GPUOptions(allow_growth=True)
-    with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,
-      gpu_options=gpu_options)) as sess:
+    with tf.Session() as sess:
         D = []
+        T = []
         sess.run(tf.global_variables_initializer())
         try:
             prev_id = None
             d = []
+            start = time.time()
             while True:
                 fetched = sess.run(fetches)
                 xlnet_out = np.squeeze(fetched[0], axis=1)
                 inputs = fetched[1]
                 seg_ids = inputs["segment_ids"][0]
                 _id = inputs["prot_id"][0]
+                target = inputs["label_ids"][0]
                 idx = np.arange(np.sum(seg_ids == 0))
                 selected = np.take(xlnet_out, indices=idx, axis=0)
 
@@ -312,14 +314,20 @@ def main(_):
                     d.append(selected)
                 else:
                     D.append(np.concatenate(d))
+                    T.append(target)
                     d = []
                     if len(D) % 10 == 0:
-                        print(len(D))
+                        end = time.time()
+                        tf.logging.info("Time {}".format((end-start)/60))
+                        tf.logging.info("Processed {} proteins".format(len(D)))
+                        start = end
                 prev_id = _id
                     
         except tf.errors.OutOfRangeError:
             D.append(np.concatenate(d))
+            T.append(target)
             pickle.dump(D, open( os.path.join(FLAGS.output_dir, "embeddings.p"), "wb" ) )
+            pickle.dump(T, open( os.path.join(FLAGS.output_dir, "targets.p"), "wb" ) )
             tf.logging.info("DONE")
 
 if __name__ == "__main__":
