@@ -58,7 +58,7 @@ class SeqClassifier(nn.Module):
     h, _ = pad_packed_sequence(rnn_out, batch_first=True, padding_value=0)
 
     # Select the last hidden state for last timestep
-    idx = seq_lens-1
+    idx = seq_lengths-1
     batch_idx = torch.arange(batch_size)
     h_last = torch.stack([h[b,i,:] for b,i in zip(batch_idx, idx)], dim=0)
     

@@ -300,6 +300,7 @@ def main(_):
             prev_id = None
             d = []
             start = time.time()
+			i = 1
             while True:
                 fetched = sess.run(fetches)
                 xlnet_out = np.squeeze(fetched[0], axis=1)
@@ -316,19 +317,27 @@ def main(_):
                     D.append(np.concatenate(d))
                     T.append(target)
                     d = []
+					i += 1
                     if len(D) % 10 == 0:
                         end = time.time()
                         tf.logging.info("Time {}".format((end-start)/60))
                         tf.logging.info("Processed {} proteins".format(len(D)))
                         start = end
+					if len(D) % 1000 == 0:
+						with tf.gfile.Open(os.path.join(FLAGS.output_dir, "embeddings_{}-{}.p".format(i-1000, i)), "wb") as fp:
+							pickle.dump(D, fp)
+						with tf.gfile.Open(os.path.join(FLAGS.output_dir, "targets_{}-{}.p".format(i-1000, i)), "wb") as fp:
+							pickle.dump(T, fp)
+						D = []
+						T = []
                 prev_id = _id
                     
         except tf.errors.OutOfRangeError:
             D.append(np.concatenate(d))
             T.append(target)
-            with tf.gfile.Open(os.path.join(FLAGS.output_dir, "embeddings.p"), "wb") as fp:
+            with tf.gfile.Open(os.path.join(FLAGS.output_dir, "embeddings_{}-{}.p".format(i-1000, i), "wb") as fp:
               pickle.dump(D, fp)
-            with tf.gfile.Open(os.path.join(FLAGS.output_dir, "targets.p"), "wb") as fp:
+            with tf.gfile.Open(os.path.join(FLAGS.output_dir, "targets_{}-{}.p".format(i-1000, i)), "wb") as fp:
               pickle.dump(T, fp)
             tf.logging.info("DONE")
 
