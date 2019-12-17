@@ -39,7 +39,7 @@ NUM_CORES = 8
 EPOCHS = 50
 FAIL_THRESHOLD = 3
 ITERATIONS = 100
-SEQ_LEN = 32
+SEQ_LEN = 1001
 
 TPU_ZONES = {
     'instance-1': "us-central1-a",
