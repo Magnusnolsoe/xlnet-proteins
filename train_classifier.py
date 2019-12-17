@@ -731,7 +731,7 @@ def main(_):
     predict_results = []
     with tf.gfile.Open(os.path.join(predict_dir, "{}.tsv".format(
         task_name)), "w") as fout:
-      fout.write("index\tprediction\tmagnusernazi\n")
+      fout.write("index\tprediction\ttarget\n")
 
       for pred_cnt, result in enumerate(estimator.predict(
           input_fn=pred_input_fn,
