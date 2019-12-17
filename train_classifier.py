@@ -731,7 +731,7 @@ def main(_):
     predict_results = []
     with tf.gfile.Open(os.path.join(predict_dir, "{}.tsv".format(
         task_name)), "w") as fout:
-      fout.write("index\tprediction\n")
+      fout.write("index\tprediction\tmagnusernazi\n")
 
       for pred_cnt, result in enumerate(estimator.predict(
           input_fn=pred_input_fn,
@@ -743,6 +743,8 @@ def main(_):
 
         logits = [float(x) for x in result["logits"].flat]
         predict_results.append(logits)
+
+        true_label = result["labels"]
 
         if len(logits) == 1:
           label_out = logits[0]
@@ -757,7 +759,7 @@ def main(_):
         else:
           raise NotImplementedError
 
-        fout.write("{}\t{}\n".format(pred_cnt, label_out))
+        fout.write("{}\t{}\t{}\n".format(pred_cnt, label_out, true_label))
 
     predict_json_path = os.path.join(predict_dir, "{}.logits.json".format(
         task_name))
