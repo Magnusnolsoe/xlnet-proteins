@@ -143,7 +143,7 @@ flags.DEFINE_string("run_id", default=None,
 FLAGS = flags.FLAGS
 
 # Internal configuration
-PATIENCE = 5 # Early stopping patience
+PATIENCE = 10 # Early stopping patience
 ROUNDING_PRECISION = 5 # precision of error when doing early stopping
 
 class InputExample(object):
