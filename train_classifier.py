@@ -652,8 +652,7 @@ def main(_):
     while len(eval_examples) % FLAGS.eval_batch_size != 0:
       eval_examples.append(PaddingInputExample())
 
-    eval_file_base = "{}.len-{}.{}.eval.tf_record".format(
-        spm_basename, FLAGS.max_seq_length, FLAGS.eval_split)
+    eval_file_base = "{}.len-{}.{}.eval.tf_record".format(FLAGS.max_seq_length, FLAGS.eval_split)
     eval_file = os.path.join(FLAGS.output_dir, eval_file_base)
 
     file_based_convert_examples_to_features(
@@ -714,8 +713,7 @@ def main(_):
     tf.logging.info(log_str)
 
   if FLAGS.do_predict:
-    eval_file_base = "{}.len-{}.{}.predict.tf_record".format(
-        spm_basename, FLAGS.max_seq_length, FLAGS.eval_split)
+    eval_file_base = "len-{}.{}.predict.tf_record".format(FLAGS.max_seq_length, FLAGS.eval_split)
     eval_file = os.path.join(FLAGS.output_dir, eval_file_base)
 
     file_based_convert_examples_to_features(
