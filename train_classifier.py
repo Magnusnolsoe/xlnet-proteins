@@ -603,10 +603,10 @@ def main(_):
           # Early Stopping based on gradient from last PATIENCE points
           eval_acc.append(eval_ret['eval_accuracy'])
           eval_errs.append(eval_ret['eval_loss'])
-          if len(eval_errs) > PATIENCE:
-                last_errs = eval_errs[-PATIENCE:]
-                slope = round(np.polyfit(xs, last_errs, deg=1)[0], ROUNDING_PRECISION)
-                if slope >= 0:
+          if len(eval_acc) > PATIENCE:
+                last_acc = eval_acc[-PATIENCE:]
+                slope = round(np.polyfit(xs, last_acc, deg=1)[0], ROUNDING_PRECISION)
+                if slope <= 0:
                       stopped_early = True
                       break
 
