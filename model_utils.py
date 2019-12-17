@@ -92,7 +92,7 @@ def init_from_checkpoint(FLAGS, global_vars=False):
   return scaffold_fn
 
 
-def get_train_op(FLAGS, total_loss, num_train_batches, grads_and_vars=None):
+def get_train_op(FLAGS, total_loss, num_train_batches=None, grads_and_vars=None):
   global_step = tf.train.get_or_create_global_step()
 
   # increase the learning rate linearly
@@ -106,6 +106,8 @@ def get_train_op(FLAGS, total_loss, num_train_batches, grads_and_vars=None):
   # decay the learning rate
   if FLAGS.use_tpu:
     steps = FLAGS.train_steps*FLAGS.epochs
+  elif num_train_batches is None:
+    steps = FLAGS.train_steps
   else:
     steps = num_train_batches * FLAGS.epochs
   if FLAGS.decay_method == "poly":
