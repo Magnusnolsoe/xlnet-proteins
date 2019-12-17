@@ -19,14 +19,11 @@ from collections import defaultdict as dd
 import absl.logging as _logging  # pylint: disable=unused-import
 import tensorflow as tf
 
-import sentencepiece as spm
-
-from data_utils import SEP_ID, VOCAB_SIZE, CLS_ID
+from data_utils import VOCAB_SIZE, preprocess_protein, encode_ids
 import model_utils
 import function_builder
 from classifier_utils import PaddingInputExample
 from classifier_utils import convert_single_example
-from prepro_utils import preprocess_text, encode_ids
 
 
 # Model
@@ -62,8 +59,6 @@ flags.DEFINE_string("init_checkpoint", default=None,
       "Could be a pretrained model or a finetuned model.")
 flags.DEFINE_string("output_dir", default="",
       help="Output dir for TF records.")
-flags.DEFINE_string("spiece_model_file", default="",
-      help="Sentence Piece model path.")
 flags.DEFINE_string("model_dir", default="",
       help="Directory for saving the finetuned model.")
 flags.DEFINE_string("data_dir", default="",
@@ -82,6 +77,9 @@ flags.DEFINE_string("gcp_project", default=None, help="gcp project.")
 flags.DEFINE_string("master", default=None, help="master")
 flags.DEFINE_integer("iterations", default=1000,
       help="number of iterations per TPU training loop.")
+
+flags.DEFINE_string("bucket_uri", default=None,
+      help="URI of gcp bucket.")
 
 # training
 flags.DEFINE_bool("do_train", default=False, help="whether to do training")
@@ -111,7 +109,7 @@ flags.DEFINE_bool("do_eval", default=False, help="whether to do eval")
 flags.DEFINE_bool("do_predict", default=False, help="whether to do prediction")
 flags.DEFINE_float("predict_threshold", default=0,
       help="Threshold for binary prediction.")
-flags.DEFINE_string("eval_split", default="dev", help="could be dev or test")
+flags.DEFINE_string("eval_split", default="test", help="could be dev or test")
 flags.DEFINE_integer("eval_batch_size", default=128,
       help="batch size for evaluation")
 flags.DEFINE_integer("predict_batch_size", default=128,
@@ -131,33 +129,36 @@ flags.DEFINE_integer("shuffle_buffer", default=2048,
 flags.DEFINE_integer("num_passes", default=1,
       help="Num passes for processing training data. "
       "This is use to batch data without loss for TPUs.")
-flags.DEFINE_bool("uncased", default=False,
-      help="Use uncased.")
 flags.DEFINE_string("cls_scope", default=None,
       help="Classifier layer scope.")
 flags.DEFINE_bool("is_regression", default=False,
       help="Whether it's a regression task.")
 
+flags.DEFINE_integer("epochs", default=1,
+      help="Amount of epochs")
+
+flags.DEFINE_string("run_id", default=None,
+      help="Id of current run.")
+
 FLAGS = flags.FLAGS
 
+# Internal configuration
+PATIENCE = 5 # Early stopping patience
+ROUNDING_PRECISION = 5 # precision of error when doing early stopping
 
 class InputExample(object):
   """A single training/test example for simple sequence classification."""
 
-  def __init__(self, guid, text_a, text_b=None, label=None):
+  def __init__(self, guid, text, label=None):
     """Constructs a InputExample.
     Args:
       guid: Unique id for the example.
-      text_a: string. The untokenized text of the first sequence. For single
-        sequence tasks, only this sequence must be specified.
-      text_b: (Optional) string. The untokenized text of the second sequence.
-        Only must be specified for sequence pair tasks.
+      text: string. The untokenized text of the sequence.
       label: (Optional) string. The label of the example. This should be
         specified for train and dev examples, but not for test examples.
     """
     self.guid = guid
-    self.text_a = text_a
-    self.text_b = text_b
+    self.text = text
     self.label = label
 
 
@@ -191,204 +192,46 @@ class DataProcessor(object):
         lines.append(line)
       return lines
 
+  @classmethod
+  def _read_txt(cls, input_file):
+    """Reads a /n separated value file"""
+    with tf.gfile.Open(input_file, "r") as f:
+      lines = []
+      for line in f:
+        if len(line) == 0: continue
+        lines.append(line)
+      return lines
 
-class GLUEProcessor(DataProcessor):
+class SubLocProcessor(DataProcessor):
   def __init__(self):
-    self.train_file = "train.tsv"
-    self.dev_file = "dev.tsv"
-    self.test_file = "test.tsv"
-    self.label_column = None
-    self.text_a_column = None
-    self.text_b_column = None
-    self.contains_header = True
-    self.test_text_a_column = None
-    self.test_text_b_column = None
-    self.test_contains_header = True
+    self.train_file = "train.txt"
+    self.test_file = "test.txt"
 
   def get_train_examples(self, data_dir):
-    """See base class."""
     return self._create_examples(
-        self._read_tsv(os.path.join(data_dir, self.train_file)), "train")
-
-  def get_dev_examples(self, data_dir):
-    """See base class."""
-    return self._create_examples(
-        self._read_tsv(os.path.join(data_dir, self.dev_file)), "dev")
+      self._read_txt(os.path.join(data_dir, self.train_file)), "train")
 
   def get_test_examples(self, data_dir):
-    """See base class."""
-    if self.test_text_a_column is None:
-      self.test_text_a_column = self.text_a_column
-    if self.test_text_b_column is None:
-      self.test_text_b_column = self.text_b_column
-
     return self._create_examples(
-        self._read_tsv(os.path.join(data_dir, self.test_file)), "test")
+      self._read_txt(os.path.join(data_dir, self.test_file)), "test")
 
   def get_labels(self):
     """See base class."""
-    return ["0", "1"]
-
+    return ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+    
   def _create_examples(self, lines, set_type):
-    """Creates examples for the training and dev sets."""
+    """Creates examples for the training and test sets."""
     examples = []
     for (i, line) in enumerate(lines):
-      if i == 0 and self.contains_header and set_type != "test":
-        continue
-      if i == 0 and self.test_contains_header and set_type == "test":
-        continue
       guid = "%s-%s" % (set_type, i)
 
-      a_column = (self.text_a_column if set_type != "test" else
-          self.test_text_a_column)
-      b_column = (self.text_b_column if set_type != "test" else
-          self.test_text_b_column)
+      line = line.split(":")
 
-      # there are some incomplete lines in QNLI
-      if len(line) <= a_column:
-        tf.logging.warning('Incomplete line, ignored.')
-        continue
-      text_a = line[a_column]
+      seq = line[0].strip()
+      label = line[1].strip()
 
-      if b_column is not None:
-        if len(line) <= b_column:
-          tf.logging.warning('Incomplete line, ignored.')
-          continue
-        text_b = line[b_column]
-      else:
-        text_b = None
-
-      if set_type == "test":
-        label = self.get_labels()[0]
-      else:
-        if len(line) <= self.label_column:
-          tf.logging.warning('Incomplete line, ignored.')
-          continue
-        label = line[self.label_column]
       examples.append(
-          InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
-    return examples
-
-
-class Yelp5Processor(DataProcessor):
-  def get_train_examples(self, data_dir):
-    return self._create_examples(os.path.join(data_dir, "train.csv"))
-
-  def get_dev_examples(self, data_dir):
-    return self._create_examples(os.path.join(data_dir, "test.csv"))
-
-  def get_labels(self):
-    """See base class."""
-    return ["1", "2", "3", "4", "5"]
-
-  def _create_examples(self, input_file):
-    """Creates examples for the training and dev sets."""
-    examples = []
-    with tf.gfile.Open(input_file) as f:
-      reader = csv.reader(f)
-      for i, line in enumerate(reader):
-
-        label = line[0]
-        text_a = line[1].replace('""', '"').replace('\\"', '"')
-        examples.append(
-            InputExample(guid=str(i), text_a=text_a, text_b=None, label=label))
-    return examples
-
-
-class ImdbProcessor(DataProcessor):
-  def get_labels(self):
-    return ["neg", "pos"]
-
-  def get_train_examples(self, data_dir):
-    return self._create_examples(os.path.join(data_dir, "train"))
-
-  def get_dev_examples(self, data_dir):
-    return self._create_examples(os.path.join(data_dir, "test"))
-
-  def _create_examples(self, data_dir):
-    examples = []
-    for label in ["neg", "pos"]:
-      cur_dir = os.path.join(data_dir, label)
-      for filename in tf.gfile.ListDirectory(cur_dir):
-        if not filename.endswith("txt"): continue
-
-        path = os.path.join(cur_dir, filename)
-        with tf.gfile.Open(path) as f:
-          text = f.read().strip().replace("<br />", " ")
-        examples.append(InputExample(
-            guid="unused_id", text_a=text, text_b=None, label=label))
-    return examples
-
-
-class MnliMatchedProcessor(GLUEProcessor):
-  def __init__(self):
-    super(MnliMatchedProcessor, self).__init__()
-    self.dev_file = "dev_matched.tsv"
-    self.test_file = "test_matched.tsv"
-    self.label_column = -1
-    self.text_a_column = 8
-    self.text_b_column = 9
-
-  def get_labels(self):
-    return ["contradiction", "entailment", "neutral"]
-
-
-class MnliMismatchedProcessor(MnliMatchedProcessor):
-  def __init__(self):
-    super(MnliMismatchedProcessor, self).__init__()
-    self.dev_file = "dev_mismatched.tsv"
-    self.test_file = "test_mismatched.tsv"
-
-
-class StsbProcessor(GLUEProcessor):
-  def __init__(self):
-    super(StsbProcessor, self).__init__()
-    self.label_column = 9
-    self.text_a_column = 7
-    self.text_b_column = 8
-
-  def get_labels(self):
-    return [0.0]
-
-  def _create_examples(self, lines, set_type):
-    """Creates examples for the training and dev sets."""
-    examples = []
-    for (i, line) in enumerate(lines):
-      if i == 0 and self.contains_header and set_type != "test":
-        continue
-      if i == 0 and self.test_contains_header and set_type == "test":
-        continue
-      guid = "%s-%s" % (set_type, i)
-
-      a_column = (self.text_a_column if set_type != "test" else
-          self.test_text_a_column)
-      b_column = (self.text_b_column if set_type != "test" else
-          self.test_text_b_column)
-
-      # there are some incomplete lines in QNLI
-      if len(line) <= a_column:
-        tf.logging.warning('Incomplete line, ignored.')
-        continue
-      text_a = line[a_column]
-
-      if b_column is not None:
-        if len(line) <= b_column:
-          tf.logging.warning('Incomplete line, ignored.')
-          continue
-        text_b = line[b_column]
-      else:
-        text_b = None
-
-      if set_type == "test":
-        label = self.get_labels()[0]
-      else:
-        if len(line) <= self.label_column:
-          tf.logging.warning('Incomplete line, ignored.')
-          continue
-        label = float(line[self.label_column])
-      examples.append(
-          InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
-
+          InputExample(guid=guid, text=seq, label=label))
     return examples
 
 
@@ -615,7 +458,7 @@ def get_model_fn(n_class):
 
         host_call = function_builder.construct_scalar_host_call(
             monitor_dict=monitor_dict,
-            model_dir=FLAGS.model_dir,
+            log_dir=FLAGS.model_dir,
             prefix="train/",
             reduce_fn=tf.reduce_mean)
       else:
@@ -646,11 +489,7 @@ def main(_):
       tf.gfile.MakeDirs(predict_dir)
 
   processors = {
-      "mnli_matched": MnliMatchedProcessor,
-      "mnli_mismatched": MnliMismatchedProcessor,
-      'sts-b': StsbProcessor,
-      'imdb': ImdbProcessor,
-      "yelp5": Yelp5Processor
+      "subloc": SubLocProcessor
   }
 
   if not FLAGS.do_train and not FLAGS.do_eval and not FLAGS.do_predict:
@@ -669,17 +508,62 @@ def main(_):
   processor = processors[task_name]()
   label_list = processor.get_labels() if not FLAGS.is_regression else None
 
-  sp = spm.SentencePieceProcessor()
-  sp.Load(FLAGS.spiece_model_file)
   def tokenize_fn(text):
-    text = preprocess_text(text, lower=FLAGS.uncased)
-    return encode_ids(sp, text)
+    text = preprocess_protein(text)
+    return encode_ids(text)
+    
+  if FLAGS.do_train:
+    train_file_base = "len-{}.train.tf_record".format(
+        FLAGS.max_seq_length)
+    train_file = os.path.join(FLAGS.output_dir, train_file_base)
+    tf.logging.info("Use tfrecord file {}".format(train_file))
+
+    train_examples = processor.get_train_examples(FLAGS.data_dir)
+    tf.logging.info("Num of train samples: {}".format(len(train_examples)))
+
+    file_based_convert_examples_to_features(
+        train_examples, label_list, FLAGS.max_seq_length, tokenize_fn,
+        train_file, FLAGS.num_passes)
+
+    train_input_fn = file_based_input_fn_builder(
+        input_file=train_file,
+        seq_length=FLAGS.max_seq_length,
+        is_training=True,
+        drop_remainder=True)
+
+    train_steps = int(math.ceil(len(train_examples) / FLAGS.train_batch_size))
+    FLAGS.train_steps = train_steps
+    FLAGS.save_steps = train_steps*FLAGS.epochs
+
+    #Load eval data
+
+    eval_examples = processor.get_test_examples(FLAGS.data_dir)
+
+    eval_file_base = "len-{}.{}.eval.tf_record".format(
+        FLAGS.max_seq_length, FLAGS.eval_split)
+    eval_file = os.path.join(FLAGS.output_dir, eval_file_base)
+
+    while len(eval_examples) % FLAGS.eval_batch_size != 0:
+      eval_examples.append(PaddingInputExample())
+
+    file_based_convert_examples_to_features(
+        eval_examples, label_list, FLAGS.max_seq_length, tokenize_fn,
+        eval_file)
+
+    eval_input_fn = file_based_input_fn_builder(
+        input_file=eval_file,
+        seq_length=FLAGS.max_seq_length,
+        is_training=False,
+        drop_remainder=True)
+
+    assert len(eval_examples) % FLAGS.eval_batch_size == 0
+    eval_steps = int(len(eval_examples) // FLAGS.eval_batch_size)
+
+    tf.logging.info("##################################### TRAIN STEPS {} #####################################".format(train_steps))
 
   run_config = model_utils.configure_tpu(FLAGS)
 
   model_fn = get_model_fn(len(label_list) if label_list is not None else None)
-
-  spm_basename = os.path.basename(FLAGS.spiece_model_file)
 
   # If TPU is not available, this will fall back to normal Estimator on CPU
   # or GPU.
@@ -697,26 +581,57 @@ def main(_):
         config=run_config)
 
   if FLAGS.do_train:
-    train_file_base = "{}.len-{}.train.tf_record".format(
-        spm_basename, FLAGS.max_seq_length)
-    train_file = os.path.join(FLAGS.output_dir, train_file_base)
-    tf.logging.info("Use tfrecord file {}".format(train_file))
+      eval_errs, eval_acc = [], []
+      xs = list(range(PATIENCE))
+      train_times, eval_times = [], []
+      stopped_early = False
+      last_errs = []
+      for i in range(FLAGS.epochs):
 
-    train_examples = processor.get_train_examples(FLAGS.data_dir)
-    np.random.shuffle(train_examples)
-    tf.logging.info("Num of train samples: {}".format(len(train_examples)))
+          tf.logging.info("#### Starting training cycle")
+          start = time.time()
+          train_ret = estimator.train(input_fn=train_input_fn, steps=FLAGS.train_steps)
+          end = time.time()
+          train_times.append((end-start)/60)
 
-    file_based_convert_examples_to_features(
-        train_examples, label_list, FLAGS.max_seq_length, tokenize_fn,
-        train_file, FLAGS.num_passes)
+          tf.logging.info("#### Starting evaluation/validation cycle")
+          start = time.time()
+          eval_ret = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
+          end = time.time()
+          eval_times.append((end-start)/60)
 
-    train_input_fn = file_based_input_fn_builder(
-        input_file=train_file,
-        seq_length=FLAGS.max_seq_length,
-        is_training=True,
-        drop_remainder=True)
+          # Early Stopping based on gradient from last PATIENCE points
+          eval_acc.append(eval_ret['eval_accuracy'])
+          eval_errs.append(eval_ret['eval_loss'])
+          if len(eval_errs) > PATIENCE:
+                last_errs = eval_errs[-PATIENCE:]
+                slope = round(np.polyfit(xs, last_errs, deg=1)[0], ROUNDING_PRECISION)
+                if slope >= 0:
+                      stopped_early = True
+                      break
 
-    estimator.train(input_fn=train_input_fn, max_steps=FLAGS.train_steps)
+          tf.logging.info("##################################### EPOCH {} #####################################".format(i+1))
+
+      best_acc = max(eval_acc)
+      indx = eval_acc.index(best_acc)
+      best_loss = eval_errs[indx]
+      std = np.std(eval_acc)
+      if not last_errs:
+            last_errs = []
+            slope = 0
+      result = {
+            'loss': str(best_loss),
+            'acc': str(best_acc),
+            'std': str(std),
+            'avg_train_time': str(np.mean(train_times)),
+            'avg_eval_time': str(np.mean(eval_times)),
+            'stopped_early': str(stopped_early),
+            'last_errors': str(last_errs),
+            'slope': str(slope),
+            'epoch': str(i)
+      }
+      with tf.gfile.Open(os.path.join(FLAGS.bucket_uri, "finetuning-results", "{}.json".format(FLAGS.run_id)), "w") as fp:
+            json.dump(result, fp)
 
   if FLAGS.do_eval or FLAGS.do_predict:
     if FLAGS.eval_split == "dev":
