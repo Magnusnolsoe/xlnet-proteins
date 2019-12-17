@@ -97,7 +97,7 @@ def generate_param_config(dirname, suggestion_id, params, model_dir_total_path, 
     warmup_steps = params['warmup_steps']*100
     lr_rate = params['learning_rate']
     lr_layer_decay_rate = params['lr_layer_decay_rate'] / 10
-    batch_size = int(params['batch_size'])
+    batch_size = 8
     d_method = params['decay_method']
 
     if FLAGS.bucket_name is not None and FLAGS.bucket_name != "":
