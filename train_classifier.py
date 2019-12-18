@@ -455,17 +455,18 @@ def get_model_fn(n_class):
         accuracy = tf.reduce_mean(tf.cast(is_correct, tf.float32))
 
         monitor_dict["accuracy"] = accuracy
-
+        '''
         host_call = function_builder.construct_scalar_host_call(
             monitor_dict=monitor_dict,
             log_dir=FLAGS.model_dir,
             prefix="train/",
             reduce_fn=tf.reduce_mean)
+        '''
       else:
         host_call = None
 
       train_spec = tf.contrib.tpu.TPUEstimatorSpec(
-          mode=mode, loss=total_loss, train_op=train_op, host_call=host_call,
+          mode=mode, loss=total_loss, train_op=train_op,
           scaffold_fn=scaffold_fn)
     else:
       train_spec = tf.estimator.EstimatorSpec(
