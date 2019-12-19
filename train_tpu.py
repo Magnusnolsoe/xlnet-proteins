@@ -355,6 +355,7 @@ def main(unused_argv):
       end = time.time()
       eval_times.append((end-start)/60)
 
+      '''
       # Early Stopping based on gradient from last PATIENCE points
       eval_errs.append(eval_ret['avg_loss'])
       if len(eval_errs) > PATIENCE:
@@ -363,9 +364,10 @@ def main(unused_argv):
             if slope >= 0:
                   stopped_early = True
                   break
-
+      '''
       tf.logging.info("##################################### EPOCH {} #####################################".format(i+1))
   
+  '''
   best_loss = min(eval_errs)
   best_pplx = np.exp(best_loss)
   std = np.std(list(map(np.exp, eval_errs)))
@@ -382,6 +384,10 @@ def main(unused_argv):
         'last_errors': str(last_errs),
         'slope': str(slope),
         'epoch': str(i)
+  }
+  '''
+  result = {
+        'loss': eval_errs
   }
   with tf.gfile.Open(os.path.join(FLAGS.bucket_uri, "results", "{}.json".format(FLAGS.run_id)), "w") as fp:
         json.dump(result, fp)
