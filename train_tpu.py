@@ -198,16 +198,17 @@ def get_model_fn(logdir):
       monitor_dict["lr"] = learning_rate
       monitor_dict['pplx'] = tf.math.exp(total_loss)
       
+      '''
       #### Creating host calls
       host_call = function_builder.construct_scalar_host_call(
             monitor_dict=monitor_dict,
             log_dir=logdir,
             prefix="train/",
             reduce_fn=tf.reduce_mean)
-
+      '''
       #### Constucting training TPUEstimatorSpec with new cache.
       train_spec = tf.contrib.tpu.TPUEstimatorSpec(
-            mode=mode, loss=total_loss, train_op=train_op, host_call=host_call,
+            mode=mode, loss=total_loss, train_op=train_op, #host_call=host_call,
             scaffold_fn=scaffold_fn)
       train_spec.cache = new_cache
 
