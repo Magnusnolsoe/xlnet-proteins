@@ -97,7 +97,6 @@ def _local_perm(inputs, targets, is_masked, perm_size, seq_len):
     # 1: use mask as input and have loss
     # 0: use token (or [SEP], [CLS]) as input and do not have loss
     target_mask = tf.cast(is_masked, tf.float32)
-    print(target_mask.shape.as_list())
 
     # Create `perm_mask`
     # `target_tokens` cannot see themselves

@@ -55,6 +55,14 @@ flags.DEFINE_string("logDir", default="logging",
       help="Path to logging directory.")
 flags.DEFINE_string("bucket_uri", default=None,
       help="URI of gcp bucket.")
+flags.DEFINE_bool("do_train", default=True,
+      help="Whether or not to trian.")
+flags.DEFINE_bool("do_eval", default=True,
+      help="Whether or not to validate (evaluate).")
+flags.DEFINE_bool("do_save_results", default=True,
+      help="Whether or not to save results.")
+flags.DEFINE_bool("do_early_stop", default=True,
+      help="Whether or not to use early stopping")
 
 # Optimization config
 flags.DEFINE_float("learning_rate", default=1e-4,
@@ -342,55 +350,59 @@ def main(unused_argv):
   train_times, eval_times = [], []
   stopped_early = False
   for i in range(FLAGS.epochs):
+      
+      if FLAGS.do_train:
+            tf.logging.info("#### Starting training cycle")
+            start = time.time()
+            train_ret = estimator.train(input_fn=train_input_fn, steps=train_steps)
+            end = time.time()
+            train_times.append((end-start)/60)
+            tf.logging.info("##################################### EPOCH {} #####################################".format(i+1))
 
-      tf.logging.info("#### Starting training cycle")
-      start = time.time()
-      train_ret = estimator.train(input_fn=train_input_fn, steps=train_steps)
-      end = time.time()
-      train_times.append((end-start)/60)
+      if FLAGS.do_eval:
+            tf.logging.info("#### Starting evaluation/validation cycle")
+            start = time.time()
+            eval_ret = estimator.evaluate(input_fn=valid_input_fn, steps=valid_steps)
+            end = time.time()
+            eval_times.append((end-start)/60)
 
-      tf.logging.info("#### Starting evaluation/validation cycle")
-      start = time.time()
-      eval_ret = estimator.evaluate(input_fn=valid_input_fn, steps=valid_steps)
-      end = time.time()
-      eval_times.append((end-start)/60)
+      if FLAGS.do_early_stop:
+            # Early Stopping based on gradient from last PATIENCE points
+            eval_errs.append(eval_ret['avg_loss'])
+                  if len(eval_errs) > PATIENCE:
+                        last_errs = eval_errs[-PATIENCE:]
+                        slope = round(np.polyfit(xs, last_errs, deg=1)[0], ROUNDING_PRECISION)
+                        if slope >= 0:
+                              stopped_early = True
+                              break
 
-      '''
-      # Early Stopping based on gradient from last PATIENCE points
-      eval_errs.append(eval_ret['avg_loss'])
-      if len(eval_errs) > PATIENCE:
-            last_errs = eval_errs[-PATIENCE:]
-            slope = round(np.polyfit(xs, last_errs, deg=1)[0], ROUNDING_PRECISION)
-            if slope >= 0:
-                  stopped_early = True
-                  break
-      '''
-      tf.logging.info("##################################### EPOCH {} #####################################".format(i+1))
-  
-  '''
-  best_loss = min(eval_errs)
-  best_pplx = np.exp(best_loss)
-  std = np.std(list(map(np.exp, eval_errs)))
-  if last_errs is None:
-        last_errs = []
-        slope = 0
-  result = {
-        'loss': str(best_loss),
-        'pplx': str(best_pplx),
-        'std': str(std),
-        'avg_train_time': str(np.mean(train_times)),
-        'avg_eval_time': str(np.mean(eval_times)),
-        'stopped_early': str(stopped_early),
-        'last_errors': str(last_errs),
-        'slope': str(slope),
-        'epoch': str(i)
-  }
-  '''
-  result = {
-        'loss': eval_errs
-  }
-  with tf.gfile.Open(os.path.join(FLAGS.bucket_uri, "results", "{}.json".format(FLAGS.run_id)), "w") as fp:
-        json.dump(result, fp)
+      if not FLAGS.do_train:
+            break
+      
+  if FLAGS.do_save_results:
+      best_loss = min(eval_errs)
+      best_pplx = np.exp(best_loss)
+      std = np.std(list(map(np.exp, eval_errs)))
+      if last_errs is None:
+            last_errs = []
+            slope = 0
+      result = {
+            'loss': str(best_loss),
+            'pplx': str(best_pplx),
+            'std': str(std),
+            'avg_train_time': str(np.mean(train_times)),
+            'avg_eval_time': str(np.mean(eval_times)),
+            'stopped_early': str(stopped_early),
+            'last_errors': str(last_errs),
+            'slope': str(slope),
+            'epoch': str(i)
+      }
+
+      result = {
+            'loss': eval_errs
+      }
+      with tf.gfile.Open(os.path.join(FLAGS.bucket_uri, "results", "{}.json".format(FLAGS.run_id)), "w") as fp:
+            json.dump(result, fp)
 
 
 if __name__ == "__main__":
