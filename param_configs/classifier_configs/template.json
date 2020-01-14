@@ -51,7 +51,6 @@
 	"num_passes": 0,
     "cls_scope": "",
     "is_regression": true,
-    "seed": 0,
     "bucket_uri": "",
     "epochs": 0,
     "run_id": ""
