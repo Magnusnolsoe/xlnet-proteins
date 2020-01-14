@@ -50,6 +50,8 @@ flags.DEFINE_float("init_std", default=0.02,
       help="Initialization std when init is normal.")
 flags.DEFINE_float("init_range", default=0.1,
       help="Initialization std when init is uniform.")
+flags.DEFINE_integer("seed", default=None,
+      help="Randomization seed.")
 
 # I/O paths
 flags.DEFINE_bool("overwrite_data", default=False,
@@ -479,6 +481,9 @@ def get_model_fn(n_class):
 
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
+
+  if FLAGS.seed:
+    tf.random.set_random_seed(FLAGS.seed)
 
   #### Validate flags
   if FLAGS.save_steps is not None:
