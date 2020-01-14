@@ -243,7 +243,6 @@ def run_worker(unused_args):
             # Update the experiment object
             experiment = conn.experiments(experiment.id).fetch()
 
-        tf.gfile.DeleteRecursively(model_dir_total_path)
         fail_count = 0
     
     if fail_count < 3:
