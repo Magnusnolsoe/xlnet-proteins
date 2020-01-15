@@ -552,7 +552,7 @@ def main(_):
       train_input_fn_pr_fold[fold] = train_input_fn
 
       train_steps = int(math.ceil(len(train_examples) / FLAGS.train_batch_size))
-      train_steps_pr_fold.append(fold, train_steps)
+      train_steps_pr_fold[fold] = train_steps
 
       #Load eval data
 
