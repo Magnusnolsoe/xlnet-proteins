@@ -143,8 +143,8 @@ flags.DEFINE_string("run_id", default=None,
 FLAGS = flags.FLAGS
 
 # Internal configuration
-PATIENCE = 10 # Early stopping patience
-ROUNDING_PRECISION = 5 # precision of error when doing early stopping
+PATIENCE = 5 # Early stopping patience
+ROUNDING_PRECISION = 4 # precision of error when doing early stopping
 
 class InputExample(object):
   """A single training/test example for simple sequence classification."""
@@ -537,7 +537,7 @@ def main(_):
       tf.logging.info("Use tfrecord file {}".format(train_file))
 
       data_dir = os.path.join(FLAGS.data_dir, "Fold_{}".format(fold))
-      
+
       train_examples = processor.get_train_examples(data_dir)
       tf.logging.info("Num of train samples for fold {}: {}".format(fold, len(train_examples)))
 
@@ -643,7 +643,7 @@ def main(_):
             acc_pr_fold.append(eval_ret["eval_accuracy"])
             err_pr_fold.append(eval_ret["eval_loss"])
 
-          train_timer.append(train_timer/60)
+          train_times.append(train_timer/60)
           eval_times.append(eval_timer/60)
           acc_pr_fold = np.array(acc_pr_fold)
           err_pr_fold = np.array(err_pr_fold)
@@ -654,8 +654,9 @@ def main(_):
           eval_acc.append(acc)
           eval_errs.append(err)
 
+          tf.logging.info("Validation performance: acc {} | loss {}".format(acc, err))
           # Early Stopping based on gradient from last PATIENCE points
-          if len(eval_acc) > PATIENCE:
+          if len(eval_acc) >= PATIENCE:
             last_acc = eval_acc[-PATIENCE:]
             slope = round(np.polyfit(xs, last_acc, deg=1)[0], ROUNDING_PRECISION)
             if slope <= 0:
