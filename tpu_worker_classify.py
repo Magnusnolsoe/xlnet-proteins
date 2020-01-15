@@ -109,6 +109,7 @@ def generate_param_config(dirname, suggestion_id, params, model_dir_total_path, 
         init_checkpoint = FLAGS.init_checkpoint
         data_dir = FLAGS.data_dir
 
+    save_steps = 10000000000000
 
     configs = {"model_config_path": model_config_path , "dropout": dropout, "dropatt": dropatt, "clamp_len": None,
             "summary_type": "last", "use_summ_proj": None, "use_bfloat16": False, "init": "normal",
@@ -117,7 +118,7 @@ def generate_param_config(dirname, suggestion_id, params, model_dir_total_path, 
             "num_core_per_host": NUM_CORES, "tpu_job_name": None, "tpu": FLAGS.tpu_name, "tpu_zone": tpu_zone,
             "gcp_project": FLAGS.gcp_project, "master": None, "iterations": ITERATIONS, "do_train": True, "train_steps": None,
             "warmup_steps": warmup_steps, "learning_rate": lr_rate, "lr_layer_decay_rate": lr_layer_decay_rate,
-            "min_lr_ratio": None, "clip": None, "max_save": None, "save_steps": None, "train_batch_size": batch_size,
+            "min_lr_ratio": None, "clip": None, "max_save": None, "save_steps": save_steps, "train_batch_size": batch_size,
             "weight_decay": weight_decay, "adam_epsilon": None, "decay_method": d_method, "do_eval": False,
             "do_predict": False, "predict_threshold": None, "eval_split": "test", "eval_batch_size": batch_size,
             "predict_batch_size": batch_size, "predict_dir": None, "eval_all_ckpt": False, "predict_ckpt": None,
