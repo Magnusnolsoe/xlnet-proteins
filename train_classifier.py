@@ -549,7 +549,7 @@ def main(_):
           seq_length=FLAGS.max_seq_length,
           is_training=True,
           drop_remainder=True)
-      train_input_fn_pr_fold.add(fold, train_input_fn)
+      train_input_fn_pr_fold[fold] = train_input_fn
 
       train_steps = int(math.ceil(len(train_examples) / FLAGS.train_batch_size))
       train_steps_pr_fold.append(fold, train_steps)
@@ -562,7 +562,7 @@ def main(_):
           FLAGS.max_seq_length, fold)
       eval_file = os.path.join(FLAGS.output_dir, eval_file_base)
 
-      num_eval_examples_pr_fold.add(fold, len(eval_examples))
+      num_eval_examples_pr_fold[fold] = len(eval_examples)
 
       while len(eval_examples) % FLAGS.eval_batch_size != 0:
         eval_examples.append(PaddingInputExample())
@@ -576,11 +576,11 @@ def main(_):
           seq_length=FLAGS.max_seq_length,
           is_training=False,
           drop_remainder=True)
-      eval_input_fn_pr_fold.add(fold, eval_input_fn)
+      eval_input_fn_pr_fold[fold] = eval_input_fn
 
       assert len(eval_examples) % FLAGS.eval_batch_size == 0
       eval_steps = int(len(eval_examples) // FLAGS.eval_batch_size)
-      eval_steps_pr_fold.add(fold, eval_steps)
+      eval_steps_pr_fold[fold] = eval_steps
       tf.logging.info("##################################### TRAIN STEPS FOR FOLD {}: {} #####################################".format(fold, train_steps))
     
     N = sum(num_eval_examples_pr_fold.values())
