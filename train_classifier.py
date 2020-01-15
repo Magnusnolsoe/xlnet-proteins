@@ -656,9 +656,9 @@ def main(_):
             file2 = "model.ckpt-{}.index".format(step)
             file3 = "model.cpkt-{}.meta".format(step)
 
-            tf.gfile.remove(os.path.join(FLAGS.model_dir, file1))
-            tf.gfile.remove(os.path.join(FLAGS.model_dir, file2))
-            tf.gfile.remove(os.path.join(FLAGS.model_dir, file3))
+            tf.gfile.Remove(os.path.join(FLAGS.model_dir, file1))
+            tf.gfile.Remove(os.path.join(FLAGS.model_dir, file2))
+            tf.gfile.Remove(os.path.join(FLAGS.model_dir, file3))
 
 
           train_times.append(train_timer/60)
