@@ -615,16 +615,18 @@ def main(_):
       train_times, eval_times = [], []
       stopped_early = False
       last_errs = []
+      accumulated_steps = 0
       for i in range(FLAGS.epochs):
 
           acc_pr_fold = []
           err_pr_fold = []
           train_timer, eval_timer = 0, 0
           global_steps = []
-          for fold in range(1, 5):
+          for fold in range(3, 5):
             
             train_input_fn = train_input_fn_pr_fold[fold]
             train_steps = train_steps_pr_fold[fold]
+            accumulated_steps += train_steps
 
             tf.logging.info("#### Starting training cycle for fold {}".format(fold))
             start = time.time()
@@ -645,7 +647,8 @@ def main(_):
             err_pr_fold.append(eval_ret["eval_loss"])
 
             if fold != 4:
-              global_steps.append(tf.train.get_global_step())
+              tf.logging.info("Appending trains step: {}".format(accumulated_steps))
+              global_steps.append(accumulated_steps)
           
           tf.logging.info("Removing checkpoint files for steps: {}".format(global_steps))
           for step in global_steps:
