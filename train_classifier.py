@@ -205,11 +205,16 @@ class DataProcessor(object):
 class SubLocProcessor(DataProcessor):
   def __init__(self):
     self.train_file = "train.txt"
+    self.valid_file = "valid.txt"
     self.test_file = "test.txt"
 
   def get_train_examples(self, data_dir):
     return self._create_examples(
       self._read_txt(os.path.join(data_dir, self.train_file)), "train")
+
+  def get_eval_examples(self, data_dir):
+    return self._create_examples(
+      self._read_txt(os.path.join(data_dir, self.valid_file)), "valid")
 
   def get_test_examples(self, data_dir):
     return self._create_examples(
@@ -512,55 +517,77 @@ def main(_):
   def tokenize_fn(text):
     text = preprocess_protein(text)
     return encode_ids(text)
-    
+  
+  train_input_fn_pr_fold = {}
+  train_steps_pr_fold = {}
+
+  eval_input_fn_pr_fold = {}
+  eval_steps_pr_fold = {}
+  fold_weights = []
+
   if FLAGS.do_train:
-    train_file_base = "len-{}.train.tf_record".format(
-        FLAGS.max_seq_length)
-    train_file = os.path.join(FLAGS.output_dir, train_file_base)
-    tf.logging.info("Use tfrecord file {}".format(train_file))
+    
+    # 4-fold cross-validation
+    num_eval_examples_pr_fold = {}
+    for fold in range(1,5):
+      
+      train_file_base = "len-{}.fold-{}.train.tf_record".format(
+          FLAGS.max_seq_length, fold)
+      train_file = os.path.join(FLAGS.output_dir, train_file_base)
+      tf.logging.info("Use tfrecord file {}".format(train_file))
 
-    train_examples = processor.get_train_examples(FLAGS.data_dir)
-    tf.logging.info("Num of train samples: {}".format(len(train_examples)))
+      data_dir = os.path.join(FLAGS.data_dir, "Fold_{}".format(fold))
+      train_examples = processor.get_train_examples(data_dir)
+      tf.logging.info("Num of train samples for fold {}: {}".format(fold, len(train_examples)))
 
-    file_based_convert_examples_to_features(
-        train_examples, label_list, FLAGS.max_seq_length, tokenize_fn,
-        train_file, FLAGS.num_passes)
+      file_based_convert_examples_to_features(
+          train_examples, label_list, FLAGS.max_seq_length, tokenize_fn,
+          train_file, FLAGS.num_passes)
 
-    train_input_fn = file_based_input_fn_builder(
-        input_file=train_file,
-        seq_length=FLAGS.max_seq_length,
-        is_training=True,
-        drop_remainder=True)
+      train_input_fn = file_based_input_fn_builder(
+          input_file=train_file,
+          seq_length=FLAGS.max_seq_length,
+          is_training=True,
+          drop_remainder=True)
+      train_input_fn_pr_fold.add(fold, train_input_fn)
 
-    train_steps = int(math.ceil(len(train_examples) / FLAGS.train_batch_size))
-    FLAGS.train_steps = train_steps
-    FLAGS.save_steps = train_steps*FLAGS.epochs
+      train_steps = int(math.ceil(len(train_examples) / FLAGS.train_batch_size))
+      train_steps_pr_fold.append(fold, train_steps)
 
-    #Load eval data
+      #Load eval data
 
-    eval_examples = processor.get_test_examples(FLAGS.data_dir)
+      eval_examples = processor.get_eval_examples(FLAGS.data_dir)
 
-    eval_file_base = "len-{}.{}.eval.tf_record".format(
-        FLAGS.max_seq_length, FLAGS.eval_split)
-    eval_file = os.path.join(FLAGS.output_dir, eval_file_base)
+      eval_file_base = "len-{}.fold-{}.eval.tf_record".format(
+          FLAGS.max_seq_length, fold)
+      eval_file = os.path.join(FLAGS.output_dir, eval_file_base)
 
-    while len(eval_examples) % FLAGS.eval_batch_size != 0:
-      eval_examples.append(PaddingInputExample())
+      num_eval_examples_pr_fold.add(fold, len(eval_examples))
 
-    file_based_convert_examples_to_features(
-        eval_examples, label_list, FLAGS.max_seq_length, tokenize_fn,
-        eval_file)
+      while len(eval_examples) % FLAGS.eval_batch_size != 0:
+        eval_examples.append(PaddingInputExample())
 
-    eval_input_fn = file_based_input_fn_builder(
-        input_file=eval_file,
-        seq_length=FLAGS.max_seq_length,
-        is_training=False,
-        drop_remainder=True)
+      file_based_convert_examples_to_features(
+          eval_examples, label_list, FLAGS.max_seq_length, tokenize_fn,
+          eval_file)
 
-    assert len(eval_examples) % FLAGS.eval_batch_size == 0
-    eval_steps = int(len(eval_examples) // FLAGS.eval_batch_size)
+      eval_input_fn = file_based_input_fn_builder(
+          input_file=eval_file,
+          seq_length=FLAGS.max_seq_length,
+          is_training=False,
+          drop_remainder=True)
+      eval_input_fn_pr_fold.add(fold, eval_input_fn)
 
-    tf.logging.info("##################################### TRAIN STEPS {} #####################################".format(train_steps))
+      assert len(eval_examples) % FLAGS.eval_batch_size == 0
+      eval_steps = int(len(eval_examples) // FLAGS.eval_batch_size)
+      eval_steps_pr_fold.add(fold, eval_steps)
+    
+    N = sum(num_eval_examples_pr_fold.values())
+    for fold in range(1,5):
+      fold_weights.append(num_eval_examples_pr_fold[fold] / N)
+    fold_weights = np.array(fold_weights)
+    
+      tf.logging.info("##################################### TRAIN STEPS FOR FOLD {}: {} #####################################".format(fold, train_steps))
 
   run_config = model_utils.configure_tpu(FLAGS)
 
@@ -589,27 +616,50 @@ def main(_):
       last_errs = []
       for i in range(FLAGS.epochs):
 
-          tf.logging.info("#### Starting training cycle")
-          start = time.time()
-          train_ret = estimator.train(input_fn=train_input_fn, steps=FLAGS.train_steps)
-          end = time.time()
-          train_times.append((end-start)/60)
+          acc_pr_fold = []
+          err_pr_fold = []
+          train_timer, eval_timer = 0, 0
+          for fold in range(1, 5):
+            
+            train_input_fn = train_input_fn_pr_fold[fold]
+            train_steps = train_steps_pr_fold[fold]
 
-          tf.logging.info("#### Starting evaluation/validation cycle")
-          start = time.time()
-          eval_ret = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
-          end = time.time()
-          eval_times.append((end-start)/60)
+            tf.logging.info("#### Starting training cycle for fold {}".format(fold))
+            start = time.time()
+            train_ret = estimator.train(input_fn=train_input_fn, steps=train_steps)
+            end = time.time()
+            train_timer += (end-start)
+
+            eval_input_fn = eval_input_fn_pr_fold[fold]
+            eval_steps = eval_steps_pr_fold[fold]
+
+            tf.logging.info("#### Starting evaluation/validation cycle for fold {}".format(fold))
+            start = time.time()
+            eval_ret = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
+            end = time.time()
+            eval_timer += (end-start)
+
+            acc_pr_fold.append(eval_ret["eval_accuracy"])
+            err_pr_fold.append(eval_ret["eval_loss"])
+
+          train_timer.append(train_timer/60)
+          eval_times.append(eval_timer/60)
+          acc_pr_fold = np.array(acc_pr_fold)
+          err_pr_fold = np.array(err_pr_fold)
+
+          acc = np.average(acc_pr_fold, weights=fold_weights)
+          err = np.average(err_pr_fold, weights=fold_weights)
+
+          eval_acc.append(acc)
+          eval_errs.append(err)
 
           # Early Stopping based on gradient from last PATIENCE points
-          eval_acc.append(eval_ret['eval_accuracy'])
-          eval_errs.append(eval_ret['eval_loss'])
           if len(eval_acc) > PATIENCE:
-                last_acc = eval_acc[-PATIENCE:]
-                slope = round(np.polyfit(xs, last_acc, deg=1)[0], ROUNDING_PRECISION)
-                if slope <= 0:
-                      stopped_early = True
-                      break
+            last_acc = eval_acc[-PATIENCE:]
+            slope = round(np.polyfit(xs, last_acc, deg=1)[0], ROUNDING_PRECISION)
+            if slope <= 0:
+              stopped_early = True
+              break
 
           tf.logging.info("##################################### EPOCH {} #####################################".format(i+1))
 
@@ -628,12 +678,14 @@ def main(_):
             'avg_eval_time': str(np.mean(eval_times)),
             'stopped_early': str(stopped_early),
             'last_accuracies': str(last_acc),
+            'accuracies': str(eval_acc),
+            'errors': str(eval_errs),
             'slope': str(slope),
             'best_epoch': str(indx+1),
             'epoch': str(i+1)
       }
       with tf.gfile.Open(os.path.join(FLAGS.bucket_uri, "finetuning-results", "{}.json".format(FLAGS.run_id)), "w") as fp:
-            json.dump(result, fp)
+          json.dump(result, fp)
 
   if FLAGS.do_eval or FLAGS.do_predict:
     if FLAGS.eval_split == "dev":
