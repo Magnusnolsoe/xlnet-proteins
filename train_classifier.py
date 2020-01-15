@@ -581,13 +581,13 @@ def main(_):
       assert len(eval_examples) % FLAGS.eval_batch_size == 0
       eval_steps = int(len(eval_examples) // FLAGS.eval_batch_size)
       eval_steps_pr_fold.add(fold, eval_steps)
+      tf.logging.info("##################################### TRAIN STEPS FOR FOLD {}: {} #####################################".format(fold, train_steps))
     
     N = sum(num_eval_examples_pr_fold.values())
     for fold in range(1,5):
       fold_weights.append(num_eval_examples_pr_fold[fold] / N)
     fold_weights = np.array(fold_weights)
     
-      tf.logging.info("##################################### TRAIN STEPS FOR FOLD {}: {} #####################################".format(fold, train_steps))
 
   run_config = model_utils.configure_tpu(FLAGS)
 
