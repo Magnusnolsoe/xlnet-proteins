@@ -537,6 +537,7 @@ def main(_):
       tf.logging.info("Use tfrecord file {}".format(train_file))
 
       data_dir = os.path.join(FLAGS.data_dir, "Fold_{}".format(fold))
+      
       train_examples = processor.get_train_examples(data_dir)
       tf.logging.info("Num of train samples for fold {}: {}".format(fold, len(train_examples)))
 
@@ -556,7 +557,7 @@ def main(_):
 
       #Load eval data
 
-      eval_examples = processor.get_eval_examples(FLAGS.data_dir)
+      eval_examples = processor.get_eval_examples(data_dir)
 
       eval_file_base = "len-{}.fold-{}.eval.tf_record".format(
           FLAGS.max_seq_length, fold)
