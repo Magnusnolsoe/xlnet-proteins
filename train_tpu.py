@@ -369,12 +369,12 @@ def main(unused_argv):
       if FLAGS.do_early_stop:
             # Early Stopping based on gradient from last PATIENCE points
             eval_errs.append(eval_ret['avg_loss'])
-                  if len(eval_errs) > PATIENCE:
-                        last_errs = eval_errs[-PATIENCE:]
-                        slope = round(np.polyfit(xs, last_errs, deg=1)[0], ROUNDING_PRECISION)
-                        if slope >= 0:
-                              stopped_early = True
-                              break
+            if len(eval_errs) > PATIENCE:
+                  last_errs = eval_errs[-PATIENCE:]
+                  slope = round(np.polyfit(xs, last_errs, deg=1)[0], ROUNDING_PRECISION)
+                  if slope >= 0:
+                        stopped_early = True
+                        break
 
       if not FLAGS.do_train:
             break
