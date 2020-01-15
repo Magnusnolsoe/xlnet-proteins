@@ -620,6 +620,7 @@ def main(_):
           acc_pr_fold = []
           err_pr_fold = []
           train_timer, eval_timer = 0, 0
+          global_steps = []
           for fold in range(1, 5):
             
             train_input_fn = train_input_fn_pr_fold[fold]
@@ -642,6 +643,20 @@ def main(_):
 
             acc_pr_fold.append(eval_ret["eval_accuracy"])
             err_pr_fold.append(eval_ret["eval_loss"])
+
+            if fold != 4:
+              global_steps.append(tf.train.get_global_step())
+          
+          tf.logging.info("Removing checkpoint files for steps: {}".format(global_steps))
+          for step in global_steps:
+            file1 = "model.ckpt-{}.data-00000-of-00001".format(step)
+            file2 = "model.ckpt-{}.index".format(step)
+            file3 = "model.cpkt-{}.meta".format(step)
+
+            tf.gfile.remove(os.path.join(FLAGS.model_dir, file1))
+            tf.gfile.remove(os.path.join(FLAGS.model_dir, file2))
+            tf.gfile.remove(os.path.join(FLAGS.model_dir, file3))
+
 
           train_times.append(train_timer/60)
           eval_times.append(eval_timer/60)
