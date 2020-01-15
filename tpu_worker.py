@@ -31,11 +31,11 @@ FAIL_THRESHOLD = 3
 ITERATIONS = 10000
 
 TPU_ZONES = {
-    'instance-1': "us-central1-a",
-    'instance-2': "us-central1-a",
-    'instance-3': "us-central1-a",
-    'instance-4': "us-central1-a",
-    'instance-5': "us-central1-a",
+    'instance-1': "europe-west4-a",
+    'instance-2': "europe-west4-a",
+    'instance-3': "europe-west4-a",
+    'instance-4': "europe-west4-a",
+    'instance-5': "europe-west4-a",
     'v2-1': "us-central1-f",
     'v2-2': "us-central1-f",
     'v2-3': "us-central1-f",
