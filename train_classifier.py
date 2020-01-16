@@ -473,7 +473,7 @@ def get_model_fn(n_class):
 
       train_spec = tf.contrib.tpu.TPUEstimatorSpec(
           mode=mode, loss=total_loss, train_op=train_op,
-          host_call=host_call, scaffold_fn=scaffold_fn)
+          scaffold_fn=scaffold_fn)
     else:
       train_spec = tf.estimator.EstimatorSpec(
           mode=mode, loss=total_loss, train_op=train_op)
