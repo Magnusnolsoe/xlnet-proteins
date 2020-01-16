@@ -145,7 +145,7 @@ FLAGS = flags.FLAGS
 # Internal configuration
 PATIENCE = 5 # Early stopping patience
 ROUNDING_PRECISION = 4 # precision of error when doing early stopping
-ACCURACY_THRESHOLD = 0.35 # Accuracy threshold to stop other folds
+ACCURACY_THRESHOLD = 0.15 # Accuracy threshold to stop other folds
 
 class InputExample(object):
   """A single training/test example for simple sequence classification."""
