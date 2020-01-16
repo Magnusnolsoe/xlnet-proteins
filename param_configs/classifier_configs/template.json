@@ -5,7 +5,7 @@
     "dropatt": 0.0,
 	"clamp_len": 0,
 	"summary_type": "last/first/mean/attn",
-    "use_summary_proj": true,
+    "use_summ_proj": true,
 	"init": "normal/uniform",
 	"init_std": 0.0,
 	"init_range": 0.0,
