@@ -617,8 +617,8 @@ def main(_):
       indx = eval_acc.index(best_acc)
       best_loss = eval_errs[indx]
       std = np.std(eval_acc)
-      if not last_errs:
-            last_errs = []
+      if not last_acc:
+            last_acc = []
             slope = 0
       result = {
             'loss': str(best_loss),
@@ -627,9 +627,9 @@ def main(_):
             'avg_train_time': str(np.mean(train_times)),
             'avg_eval_time': str(np.mean(eval_times)),
             'stopped_early': str(stopped_early),
-            'last_errors': str(last_errs),
+            'last_accs': str(last_acc),
             'slope': str(slope),
-            'epoch': str(i)
+            'epoch': str(i+1)
       }
       with tf.gfile.Open(os.path.join(FLAGS.bucket_uri, "finetuning-results", "{}.json".format(FLAGS.run_id)), "w") as fp:
             json.dump(result, fp)
