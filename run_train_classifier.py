@@ -31,7 +31,7 @@ def main(_):
         args = ""
         for key in param_keys:
             if params[key] is not None:
-                args += "--{}={}".format(key, params[key])
+                args += "--{}={} ".format(key, params[key])
         
         python = params["python"]
         assert python is not None
