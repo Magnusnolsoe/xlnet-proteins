@@ -672,10 +672,8 @@ def main(_):
         model_fn = get_model_fn(len(label_list) if label_list is not None else None)
 
       weights = fold_weights[:len(acc_per_fold.values())]
-      print(weights)
-      print(acc_per_fold.values())
-      acc = np.average(np.array(acc_per_fold.values()), weights=weights)
-      err = np.average(np.array(err_per_fold.values()), weights=weights)
+      acc = np.average(np.array(list(acc_per_fold.values())), weights=weights)
+      err = np.average(np.array(list(err_per_fold.values())), weights=weights)
       tf.logging.info("### Average validation performance across all folds: acc {} | loss {}".format(acc, err))
 
       result = {
