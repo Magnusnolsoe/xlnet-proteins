@@ -663,12 +663,14 @@ def main(_):
 
         if best_acc < ACCURACY_THRESHOLD:
           break
-        
+      
         tf.reset_default_graph()
         tf.gfile.DeleteRecursively(FLAGS.model_dir)
-        tf.gfile.MakeDirs(FLAGS.model_dir)
 
-        model_fn = get_model_fn(len(label_list) if label_list is not None else None)
+        if fold != 4:
+          tf.gfile.MakeDirs(FLAGS.model_dir)
+
+          model_fn = get_model_fn(len(label_list) if label_list is not None else None)
 
       weights = fold_weights[:len(acc_per_fold.values())]
       acc = np.average(np.array(list(acc_per_fold.values())), weights=weights)
