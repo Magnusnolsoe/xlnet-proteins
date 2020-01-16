@@ -230,13 +230,8 @@ def run_worker(unused_args):
                 suggestion=suggestion.id,
                 values=values,
                 metadata=dict(
-                    avg_train_time=results['avg_train_time'], 
-                    avg_eval_time=results['avg_eval_time'], 
-                    stopped_early=results['stopped_early'], 
-                    last_errors=results['last_accuracies'], 
-                    slope=results['slope'], 
-                    best_epoch=results['best_epoch'],
-                    epoch=results['epoch'],
+                    loss=results['loss'],
+                    best_epochs=results['best_epochs'],
                     host_name = FLAGS.gcp_project,
                     tpu_name = FLAGS.tpu_name,
                 )
