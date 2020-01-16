@@ -588,6 +588,9 @@ def main(_):
     for fold in range(1,5):
       fold_weights.append(num_eval_examples_pr_fold[fold] / N)
     fold_weights = np.array(fold_weights)
+
+    FLAGS.train_steps = sum(train_steps_pr_fold.values())
+    tf.logging.info("##################################### TRAIN STEPS IN TOTAL FOR ALL FOLDS: {} #####################################".format(FLAGS.train_steps))
     
 
   run_config = model_utils.configure_tpu(FLAGS)
