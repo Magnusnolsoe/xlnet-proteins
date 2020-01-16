@@ -145,6 +145,7 @@ FLAGS = flags.FLAGS
 # Internal configuration
 PATIENCE = 5 # Early stopping patience
 ROUNDING_PRECISION = 4 # precision of error when doing early stopping
+ACCURACY_THRESHOLD = 0.35 # Accuracy threshold to stop other folds
 
 class InputExample(object):
   """A single training/test example for simple sequence classification."""
@@ -613,99 +614,73 @@ def main(_):
         config=run_config)
 
   if FLAGS.do_train:
-      eval_errs, eval_acc = [], []
-      xs = list(range(PATIENCE))
-      train_times, eval_times = [], []
-      stopped_early = False
-      last_errs = []
-      accumulated_steps = 0
-      for i in range(FLAGS.epochs):
+      
+      acc_per_fold, err_per_fold = {}, {}
+      best_epoch_per_fold = {}
+      for fold in range(1, 5):
+        
+        tf.logging.info("### Starting on fold: {}".format(fold))
 
-          acc_pr_fold = []
-          err_pr_fold = []
-          train_timer, eval_timer = 0, 0
-          global_steps = []
-          for fold in range(1, 5):
+        train_input_fn = train_input_fn_pr_fold[fold]
+        train_steps = train_steps_pr_fold[fold]
+        eval_input_fn = eval_input_fn_pr_fold[fold]
+        eval_steps = eval_steps_pr_fold[fold]
+
+        acc_pr_epoch, err_pr_epoch = [], []
+        best_acc, best_err = float("-inf"), float("inf")
+        best_epoch = 0
+        for i in range(FLAGS.epochs):
+
+          tf.logging.info("#### Starting training cycle on epoch: {}".format(i+1))
+
+          train_ret = estimator.train(input_fn=train_input_fn, steps=train_steps)
+
+          tf.logging.info("#### Starting evaluation/validation cycle on epoch: {}".format(i+1))
+
+          eval_ret = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
+
+          tf.logging.info("### Validation performance for fold {} on epoch {}: accuracy {} | loss {}".format(fold, i+1, eval_ret["eval_accuracy"], eval_ret["eval_loss"]))
+
+          if eval_ret["eval_accuracy"] > best_acc:
+            best_acc = eval_ret["eval_accuracy"]
+            best_err = eval_ret["eval_loss"]
+            best_epoch = i+1
             
-            train_input_fn = train_input_fn_pr_fold[fold]
-            train_steps = train_steps_pr_fold[fold]
-            accumulated_steps += train_steps
+          acc_pr_epoch.append(eval_ret["eval_accuracy"])
+          err_pr_epoch.append(eval_ret["eval_loss"])
 
-            tf.logging.info("#### Starting training cycle for fold {}".format(fold))
-            start = time.time()
-            train_ret = estimator.train(input_fn=train_input_fn, steps=train_steps)
-            end = time.time()
-            train_timer += (end-start)
-
-            eval_input_fn = eval_input_fn_pr_fold[fold]
-            eval_steps = eval_steps_pr_fold[fold]
-
-            tf.logging.info("#### Starting evaluation/validation cycle for fold {}".format(fold))
-            start = time.time()
-            eval_ret = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
-            end = time.time()
-            eval_timer += (end-start)
-
-            acc_pr_fold.append(eval_ret["eval_accuracy"])
-            err_pr_fold.append(eval_ret["eval_loss"])
-
-            if fold != 4:
-              tf.logging.info("Appending trains step: {}".format(accumulated_steps))
-              global_steps.append(accumulated_steps)
-          
-          tf.logging.info("Removing checkpoint files for steps: {}".format(global_steps))
-          for step in global_steps:
-            file1 = "model.ckpt-{}.data-00000-of-00001".format(step)
-            file2 = "model.ckpt-{}.index".format(step)
-            #file3 = "model.cpkt-{}.meta".format(step)
-
-            tf.gfile.Remove(os.path.join(FLAGS.model_dir, file1))
-            tf.gfile.Remove(os.path.join(FLAGS.model_dir, file2))
-            #tf.gfile.Remove(os.path.join(FLAGS.model_dir, file3))
-
-
-          train_times.append(train_timer/60)
-          eval_times.append(eval_timer/60)
-          acc_pr_fold = np.array(acc_pr_fold)
-          err_pr_fold = np.array(err_pr_fold)
-
-          acc = np.average(acc_pr_fold, weights=fold_weights)
-          err = np.average(err_pr_fold, weights=fold_weights)
-
-          eval_acc.append(acc)
-          eval_errs.append(err)
-
-          tf.logging.info("Validation performance: acc {} | loss {}".format(acc, err))
           # Early Stopping based on gradient from last PATIENCE points
-          if len(eval_acc) >= PATIENCE:
-            last_acc = eval_acc[-PATIENCE:]
-            slope = round(np.polyfit(xs, last_acc, deg=1)[0], ROUNDING_PRECISION)
+          if len(acc_pr_epoch) >= PATIENCE:
+            last_acc = acc_pr_epoch[-PATIENCE:]
+            slope = round(np.polyfit(np.arange(PATIENCE), last_acc, deg=1)[0], ROUNDING_PRECISION)
             if slope <= 0:
-              stopped_early = True
               break
 
           tf.logging.info("##################################### EPOCH {} #####################################".format(i+1))
 
-      best_acc = max(eval_acc)
-      indx = eval_acc.index(best_acc)
-      best_loss = eval_errs[indx]
-      std = np.std(eval_acc)
-      if not last_acc:
-            last_acc = []
-            slope = 0
+        acc_per_fold[fold] = best_acc
+        err_per_fold[fold] = best_err
+        best_epoch_per_fold[fold] = best_epoch
+
+        if best_acc < ACCURACY_THRESHOLD:
+          break
+
+        tf.reset_default_graph()
+        tf.gfile.DeleteRecursively(FLAGS.model_dir)
+        tf.gfile.MakeDirs(FLAGS.model_dir)
+
+        model_fn = get_model_fn(len(label_list) if label_list is not None else None)
+
+      acc = np.average(np.array(acc_per_fold.values()), weights=fold_weights)
+      err = np.average(np.array(err_per_fold.values()), weights=fold_weights)
+      tf.logging.info("### Average validation performance across all folds: acc {} | loss {}".format(acc, err))
+
       result = {
-            'loss': str(best_loss),
-            'acc': str(best_acc),
-            'std': str(std),
-            'avg_train_time': str(np.mean(train_times)),
-            'avg_eval_time': str(np.mean(eval_times)),
-            'stopped_early': str(stopped_early),
-            'last_accuracies': str(last_acc),
-            'accuracies': str(eval_acc),
-            'errors': str(eval_errs),
-            'slope': str(slope),
-            'best_epoch': str(indx+1),
-            'epoch': str(i+1)
+            'loss': str(err),
+            'acc': str(acc),
+            'accuracies': str(acc_per_fold.values()),
+            'errors': str(err_per_fold.values()),
+            'best_epochs': str(best_epoch_per_fold.values())
       }
       with tf.gfile.Open(os.path.join(FLAGS.bucket_uri, "finetuning-results", "{}.json".format(FLAGS.run_id)), "w") as fp:
           json.dump(result, fp)
