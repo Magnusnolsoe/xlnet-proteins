@@ -110,13 +110,14 @@ def generate_param_config(dirname, suggestion_id, params, model_dir_total_path, 
         data_dir = FLAGS.data_dir
 
     save_steps = 10000000000000
+    lr_decay_steps = 67000
 
     configs = {"model_config_path": model_config_path , "dropout": dropout, "dropatt": dropatt, "clamp_len": None,
             "summary_type": "last", "use_summ_proj": None, "use_bfloat16": False, "init": "normal",
             "init_std": None, "init_range": None, "overwrite_data": False, "init_checkpoint": init_checkpoint,
             "output_dir": output_data_dir, "model_dir": model_dir_total_path, "data_dir": data_dir, "use_tpu": True, "num_hosts": NUM_HOSTS,
             "num_core_per_host": NUM_CORES, "tpu_job_name": None, "tpu": FLAGS.tpu_name, "tpu_zone": tpu_zone,
-            "gcp_project": FLAGS.gcp_project, "master": None, "iterations": ITERATIONS, "do_train": True, "train_steps": None,
+            "gcp_project": FLAGS.gcp_project, "master": None, "iterations": ITERATIONS, "do_train": True, "lr_decay_steps": lr_decay_steps,
             "warmup_steps": warmup_steps, "learning_rate": lr_rate, "lr_layer_decay_rate": lr_layer_decay_rate,
             "min_lr_ratio": None, "clip": None, "max_save": None, "save_steps": save_steps, "train_batch_size": batch_size,
             "weight_decay": weight_decay, "adam_epsilon": None, "decay_method": d_method, "do_eval": False,
@@ -144,7 +145,7 @@ def start_tpu(config_path):
             'init_std', 'init_range', 'overwrite_data', 'init_checkpoint',
             'output_dir', 'model_dir', 'data_dir', 'use_tpu', 'num_hosts',
             'num_core_per_host', 'tpu_job_name', 'tpu', 'tpu_zone',
-            'gcp_project', 'master', 'iterations', 'do_train', 'train_steps',
+            'gcp_project', 'master', 'iterations', 'do_train', 'lr_decay_steps',
             'warmup_steps', 'learning_rate', 'lr_layer_decay_rate',
             'min_lr_ratio', 'clip', 'max_save', 'save_steps', 'train_batch_size',
             'weight_decay', 'adam_epsilon', 'decay_method', 'do_eval',

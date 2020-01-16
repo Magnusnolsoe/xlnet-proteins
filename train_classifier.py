@@ -83,8 +83,8 @@ flags.DEFINE_string("bucket_uri", default=None,
 
 # training
 flags.DEFINE_bool("do_train", default=False, help="whether to do training")
-flags.DEFINE_integer("train_steps", default=1000,
-      help="Number of training steps")
+flags.DEFINE_integer("lr_decay_steps", default=1000,
+      help="Number of steps learning rate to decay in.")
 flags.DEFINE_integer("warmup_steps", default=0, help="number of warmup steps")
 flags.DEFINE_float("learning_rate", default=1e-5, help="initial learning rate")
 flags.DEFINE_float("lr_layer_decay_rate", 1.0,
@@ -141,8 +141,6 @@ flags.DEFINE_string("run_id", default=None,
       help="Id of current run.")
 
 FLAGS = flags.FLAGS
-
-LOG_DIR = "gs://xlnet-data-bucket/logging/fold-1"
 
 # Internal configuration
 PATIENCE = 5 # Early stopping patience
@@ -360,7 +358,6 @@ def file_based_input_fn_builder(input_file, seq_length, is_training,
 
 
 def get_model_fn(n_class):
-  tf.gfile.MakeDirs(LOG_DIR)
   def model_fn(features, labels, mode, params):
     #### Training or Evaluation
     is_training = (mode == tf.estimator.ModeKeys.TRAIN)
@@ -464,13 +461,13 @@ def get_model_fn(n_class):
         accuracy = tf.reduce_mean(tf.cast(is_correct, tf.float32))
 
         monitor_dict["accuracy"] = accuracy
-
+        '''
         host_call = function_builder.construct_scalar_host_call(
             monitor_dict=monitor_dict,
             log_dir=LOG_DIR,
             prefix="train/",
             reduce_fn=tf.reduce_mean)
-
+        '''
       else:
         host_call = None
 
@@ -593,8 +590,7 @@ def main(_):
       fold_weights.append(num_eval_examples_pr_fold[fold] / N)
     fold_weights = np.array(fold_weights)
 
-    FLAGS.train_steps = sum(train_steps_pr_fold.values())
-    tf.logging.info("##################################### TRAIN STEPS IN TOTAL FOR ALL FOLDS: {} #####################################".format(FLAGS.train_steps))
+    tf.logging.info("##################################### TRAIN STEPS IN TOTAL FOR ALL FOLDS: {} #####################################".format(sum(train_steps_pr_fold.values())))
     
 
   run_config = model_utils.configure_tpu(FLAGS)
@@ -668,7 +664,6 @@ def main(_):
         if best_acc < ACCURACY_THRESHOLD:
           break
         
-        LOG_DIR = "gs://xlnet-data-bucket/logging/fold-{}".format(fold)
         tf.reset_default_graph()
         tf.gfile.DeleteRecursively(FLAGS.model_dir)
         tf.gfile.MakeDirs(FLAGS.model_dir)

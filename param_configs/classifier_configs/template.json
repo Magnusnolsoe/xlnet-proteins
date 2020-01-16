@@ -24,7 +24,7 @@
 	"master": "",
     "iterations": 0,
     "do_train": true,
-	"train_steps": 0,
+	"lr_decay_steps": 0,
 	"warmup_steps": 0,
 	"learning_rate": 0.0,
     "lr_layer_decay_rate": 0.0,
