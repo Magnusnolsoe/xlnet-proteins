@@ -142,6 +142,8 @@ flags.DEFINE_string("run_id", default=None,
 
 FLAGS = flags.FLAGS
 
+LOG_DIR = "gs://xlnet-data-bucket/logging/fold-1"
+
 # Internal configuration
 PATIENCE = 5 # Early stopping patience
 ROUNDING_PRECISION = 4 # precision of error when doing early stopping
@@ -358,6 +360,7 @@ def file_based_input_fn_builder(input_file, seq_length, is_training,
 
 
 def get_model_fn(n_class):
+  tf.gfile.MakeDirs(LOG_DIR)
   def model_fn(features, labels, mode, params):
     #### Training or Evaluation
     is_training = (mode == tf.estimator.ModeKeys.TRAIN)
@@ -461,19 +464,19 @@ def get_model_fn(n_class):
         accuracy = tf.reduce_mean(tf.cast(is_correct, tf.float32))
 
         monitor_dict["accuracy"] = accuracy
-        '''
+
         host_call = function_builder.construct_scalar_host_call(
             monitor_dict=monitor_dict,
-            log_dir=FLAGS.model_dir,
+            log_dir=LOG_DIR,
             prefix="train/",
             reduce_fn=tf.reduce_mean)
-        '''
+
       else:
         host_call = None
 
       train_spec = tf.contrib.tpu.TPUEstimatorSpec(
           mode=mode, loss=total_loss, train_op=train_op,
-          scaffold_fn=scaffold_fn)
+          host_call=host_call, scaffold_fn=scaffold_fn)
     else:
       train_spec = tf.estimator.EstimatorSpec(
           mode=mode, loss=total_loss, train_op=train_op)
@@ -664,7 +667,8 @@ def main(_):
 
         if best_acc < ACCURACY_THRESHOLD:
           break
-
+        
+        LOG_DIR = "gs://xlnet-data-bucket/logging/fold-{}".format(fold)
         tf.reset_default_graph()
         tf.gfile.DeleteRecursively(FLAGS.model_dir)
         tf.gfile.MakeDirs(FLAGS.model_dir)
