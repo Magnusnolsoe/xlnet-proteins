@@ -625,7 +625,7 @@ def main(_):
           err_pr_fold = []
           train_timer, eval_timer = 0, 0
           global_steps = []
-          for fold in range(3, 5):
+          for fold in range(1, 5):
             
             train_input_fn = train_input_fn_pr_fold[fold]
             train_steps = train_steps_pr_fold[fold]
