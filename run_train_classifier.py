@@ -39,4 +39,4 @@ def main(_):
         os.system(python + " train_classifier.py " + args)
 
 if __name__ == "__main__":
-    app.run()
+    app.run(main)
