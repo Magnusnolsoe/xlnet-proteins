@@ -53,5 +53,6 @@
     "is_regression": true,
     "bucket_uri": "",
     "epochs": 0,
+    "use_bfloat16": true,
     "run_id": ""
 }
