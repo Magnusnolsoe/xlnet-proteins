@@ -36,7 +36,7 @@ flags.DEFINE_string("data_dir", default="",
 # Internal Configurations
 NUM_HOSTS = 1
 NUM_CORES = 8
-EPOCHS = 50
+EPOCHS = 20
 FAIL_THRESHOLD = 3
 ITERATIONS = 100
 SEQ_LEN = 1001
