@@ -665,7 +665,17 @@ def main(_):
 
         if best_acc < ACCURACY_THRESHOLD:
           break
-      
+        
+        fold_result = {
+          'best_acc': str(best_acc),
+          'best_loss': str(best_err),
+          'best_epoch': str(best_epoch),
+          'accuracies': str(acc_pr_epoch),
+          'errors': str(err_pr_epoch)
+        }
+        with tf.gfile.Open(os.path.join(FLAGS.bucket_uri, "finetuning-results", "{}_fold-{}.json".format(FLAGS.run_id, fold)), "w") as fp:
+          json.dump(fold_result, fp)
+
         tf.reset_default_graph()
         tf.gfile.DeleteRecursively(FLAGS.model_dir)
 
