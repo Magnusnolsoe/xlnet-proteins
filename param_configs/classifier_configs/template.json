@@ -5,7 +5,7 @@
     "dropatt": 0.0,
 	"clamp_len": 0,
 	"summary_type": "last/first/mean/attn",
-    "use_summary_proj": true,
+    "use_summ_proj": true,
 	"init": "normal/uniform",
 	"init_std": 0.0,
 	"init_range": 0.0,
@@ -24,7 +24,8 @@
 	"master": "",
     "iterations": 0,
     "do_train": true,
-	"lr_decay_steps": 0,
+    "do_early_stop": true,
+	"train_steps": 0,
 	"warmup_steps": 0,
 	"learning_rate": 0.0,
     "lr_layer_decay_rate": 0.0,
@@ -53,5 +54,6 @@
     "is_regression": true,
     "bucket_uri": "",
     "epochs": 0,
+    "use_bfloat16": true,
     "run_id": ""
 }

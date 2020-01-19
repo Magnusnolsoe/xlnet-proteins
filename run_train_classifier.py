@@ -25,13 +25,13 @@ def main(_):
             'do_predict', 'predict_threshold', 'eval_split', 'eval_batch_size',
             'predict_batch_size', 'predict_dir', 'eval_all_ckpt', 'predict_ckpt',
             'task_name', 'max_seq_length', 'shuffle_buffer', 'num_passes',
-            'cls_scope', 'is_regression', 'run_id', 'bucket_uri', 'epochs'
+            'cls_scope', 'is_regression', 'run_id', 'bucket_uri', 'epochs', 'do_early_stop'
         ]
 
         args = ""
         for key in param_keys:
             if params[key] is not None:
-                args += "--{}={}".format(key, params[key])
+                args += "--{}={} ".format(key, params[key])
         
         python = params["python"]
         assert python is not None
@@ -39,4 +39,4 @@ def main(_):
         os.system(python + " train_classifier.py " + args)
 
 if __name__ == "__main__":
-    app.run()
+    app.run(main)
