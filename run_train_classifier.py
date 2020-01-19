@@ -18,7 +18,7 @@ def main(_):
             'init_std', 'init_range', 'overwrite_data', 'init_checkpoint',
             'output_dir', 'model_dir', 'data_dir', 'use_tpu', 'num_hosts',
             'num_core_per_host', 'tpu_job_name', 'tpu', 'tpu_zone',
-            'gcp_project', 'master', 'iterations', 'do_train', 'train_steps',
+            'gcp_project', 'master', 'iterations', 'do_train', 'lr_decay_steps',
             'warmup_steps', 'learning_rate', 'lr_layer_decay_rate',
             'min_lr_ratio', 'clip', 'max_save', 'save_steps', 'train_batch_size',
             'weight_decay', 'adam_epsilon', 'decay_method', 'do_eval',
