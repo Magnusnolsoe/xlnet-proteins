@@ -83,6 +83,7 @@ flags.DEFINE_string("bucket_uri", default=None,
 
 # training
 flags.DEFINE_bool("do_train", default=False, help="whether to do training")
+flags.DEFINE_bool("do_early_stop", default=False, help="whether to do early stopping during training")
 flags.DEFINE_integer("lr_decay_steps", default=1000,
       help="Number of steps learning rate to decay in.")
 flags.DEFINE_integer("warmup_steps", default=0, help="number of warmup steps")
@@ -649,11 +650,12 @@ def main(_):
           err_pr_epoch.append(eval_ret["eval_loss"])
 
           # Early Stopping based on gradient from last PATIENCE points
-          if len(acc_pr_epoch) >= PATIENCE:
-            last_acc = acc_pr_epoch[-PATIENCE:]
-            slope = round(np.polyfit(np.arange(PATIENCE), last_acc, deg=1)[0], ROUNDING_PRECISION)
-            if slope <= 0:
-              break
+          if FLAGS.do_early_stop:
+            if len(acc_pr_epoch) >= PATIENCE:
+              last_acc = acc_pr_epoch[-PATIENCE:]
+              slope = round(np.polyfit(np.arange(PATIENCE), last_acc, deg=1)[0], ROUNDING_PRECISION)
+              if slope <= 0:
+                break
 
           tf.logging.info("##################################### EPOCH {} #####################################".format(i+1))
 
